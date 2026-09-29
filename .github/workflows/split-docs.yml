@@ -1,0 +1,81 @@
+name: Split docs for reading
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/split-docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Split big files
+        run: |
+          python3 - <<'PYEOF'
+          import json, os
+          base = 'ARCHIVE/MEGA_TANK_v3_0'
+          out = 'SPLIT'
+          os.makedirs(out + '/chat', exist_ok=True)
+          os.makedirs(out + '/doc', exist_ok=True)
+
+          # --- Qwen chat -> one file per message, split in 38k parts ---
+          with open(base + '/05-chat-full-qwen.json', encoding='utf-8') as f:
+              chat = json.load(f)
+          msgs = chat.get('chat', {}).get('history', {}).get('messages', {})
+          index = []
+          n = 0
+          for mid, m in msgs.items():
+              if not isinstance(m, dict):
+                  continue
+              role = m.get('role', '?')
+              content = m.get('content') or ''
+              if not isinstance(content, str):
+                  content = json.dumps(content, ensure_ascii=False)
+              n += 1
+              prefix = out + '/chat/' + ('%04d_%s' % (n, role))
+              size = 38000
+              parts = [content[i:i+size] for i in range(0, len(content), size)] or ['']
+              for p, chunk in enumerate(parts):
+                  with open('%s.part%d' % (prefix, p), 'w', encoding='utf-8') as fh:
+                      fh.write(chunk)
+              index.append('#%04d [%s] len=%d parts=%d id=%s' % (n, role, len(content), len(parts), mid))
+          with open(out + '/chat/INDEX.txt', 'w', encoding='utf-8') as fh:
+              fh.write('
+'.join(index))
+          print('CHAT MESSAGES: %d' % n)
+
+          # --- docs -> 38k parts ---
+          for fn in sorted(os.listdir(base)):
+              if fn.endswith('.json'):
+                  continue
+              src = os.path.join(base, fn)
+              if not os.path.isfile(src):
+                  continue
+              with open(src, encoding='utf-8', errors='replace') as f:
+                  txt = f.read()
+              tag = fn.split(' ')[0][:6]
+              size = 38000
+              parts = [txt[i:i+size] for i in range(0, len(txt), size)]
+              for p, chunk in enumerate(parts):
+                  with open('%s/doc/%s.part%d' % (out, tag, p), 'w', encoding='utf-8') as fh:
+                      fh.write(chunk)
+              with open(out + '/doc/' + tag + '.INDEX.txt', 'w', encoding='utf-8') as fh:
+                  fh.write('%s = %s | total_len=%d parts=%d
+' % (tag, fn, len(txt), len(parts)))
+          print('DOCS SPLIT DONE')
+          PYEOF
+
+      - name: Push split branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b split-docs
+          git add SPLIT
+          git commit -m "Split docs for reading"
+          git push origin split-docs
