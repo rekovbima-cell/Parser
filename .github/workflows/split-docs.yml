@@ -23,7 +23,7 @@ jobs:
           out = 'SPLIT'
           os.makedirs(out + '/chat', exist_ok=True)
           os.makedirs(out + '/doc', exist_ok=True)
-
+          
           # --- Qwen chat -> one file per message, split in 38k parts ---
           with open(base + '/05-chat-full-qwen.json', encoding='utf-8') as f:
               chat = json.load(f)
@@ -46,10 +46,9 @@ jobs:
                       fh.write(chunk)
               index.append('#%04d [%s] len=%d parts=%d id=%s' % (n, role, len(content), len(parts), mid))
           with open(out + '/chat/INDEX.txt', 'w', encoding='utf-8') as fh:
-              fh.write('
-'.join(index))
+              fh.write(chr(10).join(index))
           print('CHAT MESSAGES: %d' % n)
-
+          
           # --- docs -> 38k parts ---
           for fn in sorted(os.listdir(base)):
               if fn.endswith('.json'):
@@ -66,8 +65,7 @@ jobs:
                   with open('%s/doc/%s.part%d' % (out, tag, p), 'w', encoding='utf-8') as fh:
                       fh.write(chunk)
               with open(out + '/doc/' + tag + '.INDEX.txt', 'w', encoding='utf-8') as fh:
-                  fh.write('%s = %s | total_len=%d parts=%d
-' % (tag, fn, len(txt), len(parts)))
+                  fh.write('%s = %s | total_len=%d parts=%d' % (tag, fn, len(txt), len(parts)) + chr(10))
           print('DOCS SPLIT DONE')
           PYEOF
 
