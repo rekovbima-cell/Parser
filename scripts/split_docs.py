@@ -8,6 +8,8 @@ os.makedirs(out + '/doc', exist_ok=True)
 # --- Qwen chat: one file per message, split in 38k parts ---
 with open(base + '/05-chat-full-qwen.json', encoding='utf-8') as f:
     chat = json.load(f)
+if isinstance(chat, list):
+    chat = chat[0]
 msgs = chat.get('chat', {}).get('history', {}).get('messages', {})
 index = []
 n = 0
