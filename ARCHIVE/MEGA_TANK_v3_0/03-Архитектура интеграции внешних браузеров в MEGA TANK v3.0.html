@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Архитектура интеграции внешних браузеров в MEGA TANK v3.0</title>
+
+  <!-- Essential CDN Libraries -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: 'hsl(210, 75%, 95%)',
+              100: 'hsl(210, 75%, 85%)',
+              200: 'hsl(210, 75%, 75%)',
+              300: 'hsl(210, 75%, 65%)',
+              400: 'hsl(210, 75%, 55%)',
+              500: 'hsl(210, 75%, 40%)',
+              600: 'hsl(210, 75%, 35%)',
+              700: 'hsl(210, 75%, 25%)',
+              800: 'hsl(210, 75%, 15%)',
+              900: 'hsl(210, 75%, 10%)'
+            },
+            accent: {
+              50: 'hsl(240, 65%, 95%)',
+              100: 'hsl(240, 65%, 85%)',
+              200: 'hsl(240, 65%, 75%)',
+              300: 'hsl(240, 65%, 65%)',
+              400: 'hsl(240, 65%, 60%)',
+              500: 'hsl(240, 65%, 55%)',
+              600: 'hsl(240, 65%, 50%)',
+              700: 'hsl(240, 65%, 40%)',
+              800: 'hsl(240, 65%, 30%)',
+              900: 'hsl(240, 65%, 20%)'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+
+  <!-- Preline UI Components -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/preline@2.0.3/dist/preline.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/preline@2.0.3/dist/preline.js"></script>
+
+  <!-- Custom Styles -->
+  <style>
+    html { scroll-behavior: smooth; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      html { scroll-behavior: auto; }
+    }
+
+    .btn-interactive {
+      transition: all 0.2s ease-out;
+    }
+    
+    .btn-interactive:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .btn-interactive:active {
+      transform: scale(0.95);
+    }
+
+    .card-interactive {
+      transition: all 0.3s ease-out;
+      border: 1px solid transparent;
+      --border-lightness: 40%;
+    }
+
+    .dark .card-interactive {
+      --border-lightness: 60%;
+    }
+
+    .card-interactive:hover {
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      filter: brightness(0.98);
+    }
+    
+    /* Primary colored cards */
+    .card-interactive[class*="primary"]:hover,
+    .card-interactive[class*="white"]:hover,
+    .card-interactive[class*="gray-"]:hover {
+      border-color: hsl(210, 75%, var(--border-lightness));
+    }
+    
+    /* Accent colored cards */
+    .card-interactive[class*="accent"]:hover {
+      border-color: hsl(240, 65%, var(--border-lightness));
+    }
+
+    .dark .card-interactive:hover {
+      filter: brightness(1.05);
+    }
+  </style>
+
+  <!-- Dark Mode Toggle Script -->
+  <script>
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark');
+      const isDark = document.body.classList.contains('dark');
+      document.getElementById('sunIcon').style.display = isDark ? 'block' : 'none';
+      document.getElementById('moonIcon').style.display = isDark ? 'none' : 'block';
+    }
+  </script>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+  <!-- Progress Bar -->
+  <div class="fixed top-0 left-0 h-1 bg-primary-500 dark:bg-primary-400 z-[60] transition-all duration-300 ease-out" id="progressBar" style="width: 0%;"></div>
+
+  <!-- Floating Header -->
+  <header class="fixed top-0 left-0 right-0 z-50 backdrop-blur bg-gray-50/90 dark:bg-gray-900/90 border-b border-primary-500/20 dark:border-primary-600/20">
+    <nav class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-xl font-bold text-primary-700 dark:text-primary-300">MEGA TANK v3.0</h1>
+        
+        <div class="hidden md:flex items-center space-x-6">
+          <a href="#home" class="text-sm font-medium text-primary-600 dark:text-primary-300 hover:text-primary-700 dark:hover:text-primary-200 transition-colors">Главная</a>
+          <a href="#architecture" class="text-sm font-medium text-primary-600 dark:text-primary-300 hover:text-primary-700 dark:hover:text-primary-200 transition-colors">Архитектура</a>
+          <a href="#cdp" class="text-sm font-medium text-primary-600 dark:text-primary-300 hover:text-primary-700 dark:hover:text-primary-200 transition-colors">CDP</a>
+          <a href="#profiles" class="text-sm font-medium text-primary-600 dark:text-primary-300 hover:text-primary-700 dark:hover:text-primary-200 transition-colors">Профили</a>
+          <a href="#security" class="text-sm font-medium text-primary-600 dark:text-primary-300 hover:text-primary-700 dark:hover:text-primary-200 transition-colors">Безопасность</a>
+          <a href="#integration" class="text-sm font-medium text-primary-600 dark:text-primary-300 hover:text-primary-700 dark:hover:text-primary-200 transition-colors">Интеграция</a>
+          <a href="#conclusion" class="text-sm font-medium text-primary-600 dark:text-primary-300 hover:text-primary-700 dark:hover:text-primary-200 transition-colors">Заключение</a>
+        </div>
+        
+        <button onclick="toggleDarkMode()" class="btn-interactive p-2 rounded-lg bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-700 transition-all">
+          <i data-lucide="sun" id="sunIcon" class="w-5 h-5"></i>
+          <i data-lucide="moon" id="moonIcon" class="w-5 h-5" style="display: none;"></i>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main class="min-h-screen">
+    <!-- Hero Section -->
+    <section id="home" class="pt-40 pb-20 bg-primary-50/50 dark:bg-gray-900" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="text-center mb-12">
+          <h2 class="text-4xl md:text-5xl font-bold mb-6 text-primary-700 dark:text-primary-300">
+            Архитектура интеграции внешних браузеров в MEGA TANK v3.0
+          </h2>
+          <p class="text-xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed">
+            Модернизация инструмента для поддержки внешних портативных браузеров и пользовательских профилей через протокол удаленной отладки и механизмов сохранения сессий
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8 items-center mt-16">
+          <div class="space-y-6">
+            <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300" data-ref="https://github.com/roniemartinez/browsers|9">
+              Обнаружение установленных браузеров
+            </h3>
+            <p class="text-gray-700 dark:text-gray-300">
+              Библиотека Python для обнаружения и запуска браузеров позволяет автоматически определять установленные браузеры на машине macOS, что является ключевым элементом для интеграции внешних исполняемых файлов.
+            </p>
+            
+            <div class="pl-4 pr-3 py-3 border-l-4 border-primary-500 bg-primary-50/40 dark:bg-primary-900/30 rounded-r-lg">
+              <p class="text-sm font-medium text-primary-900 dark:text-primary-100 leading-relaxed" data-ref="https://developer.chrome.com/blog/remote-debugging-port|2">
+                <i data-lucide="shield-alert" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+                Критическое замечание: Начиная с Chrome версии 136, переключатели удаленной отладки больше не учитываются при использовании с каталогом данных пользователя по умолчанию из соображений безопасности.
+              </p>
+            </div>
+          </div>
+          
+          <img
+            src="https://cdn.qwenlm.ai/d09b27ad-8fe1-4a11-b761-510992da8aba/c7b08fbb-91b0-42dc-b1ab-a7ccc6af5d70/3138b544-1dd4-4587-912a-b3044e85719c.png?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZXNvdXJjZV91c2VyX2lkIjoiZDA5YjI3YWQtOGZlMS00YTExLWI3NjEtNTEwOTkyZGE4YWJhIiwicmVzb3VyY2VfaWQiOiJjN2IwOGZiYi05MWIwLTQyZGMtYjFhYi1hN2NjYzZhZjVkNzAiLCJyZXNvdXJjZV9jaGF0X2lkIjpudWxsfQ.ACcC9hBwmt66QaH1lbEA1I8QzbdsCHId1EnUUtgG7Zg"
+            alt="Концептуальная диаграмма архитектуры: слева - иконка Python скрипта с символом змеи цвета #1a73b3, справа - три портативных браузерных иконки (Firefox, Chrome, LibreWolf) расположены горизонтально на светло-сером фоне #f3f4f6. Между ними стрелки связи, указывающие на общий центральный серверный компонент с иконкой молнии #6366f1. Все элементы окружены тонкой рамкой #1a73b3. Текстовые метки на русском языке 'Обнаружение браузеров', 'Протокол удаленной отладки', 'Пользовательские профили' размещены под соответствующими элементами. Композиция симметричная, визуально сбалансированная."
+            class="w-full rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" class="py-20 bg-white/80 dark:bg-gray-900" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-primary-700 dark:text-primary-300">
+          Архитектурные принципы интеграции
+        </h2>
+
+        <div class="grid md:grid-cols-3 gap-6 mb-12">
+          <div class="card-interactive p-6 bg-primary-50/50 dark:bg-primary-900/20 rounded-xl shadow-md">
+            <div class="flex items-center space-x-4 mb-4">
+              <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="cpu" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-primary-700 dark:text-primary-300" data-ref="https://stackoverflow.com/questions/62281859/how-to-use-installed-version-of-chrome-in-playwright|7">
+                Поддержка движков
+              </h3>
+            </div>
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Playwright позволяет запускать внешний экземпляр Google Chrome вместо встроенного Chromium, используя опцию executablePath. Версия внешнего Chrome должна совпадать с версией Chromium, с которым был построен Playwright.
+            </p>
+          </div>
+
+          <div class="card-interactive p-6 bg-accent-50/50 dark:bg-accent-900/20 rounded-xl shadow-md">
+            <div class="flex items-center space-x-4 mb-4">
+              <div class="flex-shrink-0 w-12 h-12 bg-accent-100 dark:bg-accent-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="layers" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-accent-700 dark:text-accent-300" data-ref="https://playwright.dev/docs/api/class-browsertype|5">
+                Постоянные контексты
+              </h3>
+            </div>
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Метод launchPersistentContext(userDataDir) запускает браузер, использующий постоянное хранилище в указанном каталоге userDataDir. Это идеально подходит для поддержания состояния между запусками.
+            </p>
+          </div>
+
+          <div class="card-interactive p-6 bg-primary-50/50 dark:bg-primary-900/20 rounded-xl shadow-md">
+            <div class="flex items-center space-x-4 mb-4">
+              <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="globe" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-primary-700 dark:text-primary-300" data-ref="https://www.neovasolutions.com/2024/06/13/automating-chrome-with-existing-profiles-using-playwright-and-typescript/|8">
+                Управление каналами
+              </h3>
+            </div>
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Метод launchPersistentContext поддерживает запуск различных каналов браузера путем установки опции канала. Документация предоставляет примеры для "chrome", "firefox" и "webkit".
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300">
+            Механизмы подключения к внешним браузерам
+          </h3>
+          
+          <div class="hs-accordion-group space-y-4">
+            <div class="hs-accordion card-interactive bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+              <button class="hs-accordion-toggle w-full flex justify-between items-center p-4 text-left hover:bg-primary-50 dark:hover:bg-gray-700/50 transition-colors rounded-xl" id="hs-arch-1">
+                <div class="flex items-center space-x-4">
+                  <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                    <i data-lucide="plug" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                  </div>
+                  <span class="font-semibold text-lg text-primary-700 dark:text-primary-300">Подключение через CDP</span>
+                </div>
+                <i data-lucide="chevron-down" class="hs-accordion-active:rotate-180 transition-transform duration-300 w-5 h-5 text-primary-600 dark:text-primary-400"></i>
+              </button>
+              <div id="hs-collapse-arch-1" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300" aria-labelledby="hs-arch-1">
+                <div class="p-6 pt-0 space-y-4">
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://www.browserless.io/blog/chrome-remote-debugging|1">
+                    Для включения удаленной отладки в запущенном экземпляре Chrome он должен быть запущен с флагом --remote-debugging-port=9222. Это открывает конечную точку WebSocket на localhost:9222, к которой могут подключаться внешние инструменты, такие как Puppeteer или Playwright.
+                  </p>
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://playwright.dev/docs/api/class-browsertype|5">
+                    Playwright предоставляет метод connectOverCDP для подключения к существующему экземпляру браузера на основе Chromium с использованием Chrome DevTools Protocol (CDP). Подключение осуществляется путем предоставления URL-адреса конечной точки веб-сокета CDP.
+                  </p>
+                  <div class="pl-4 pr-3 py-3 border-l-4 border-amber-500 bg-amber-50/40 dark:bg-amber-900/30 rounded-r-lg">
+                    <p class="text-sm font-medium text-amber-900 dark:text-amber-100 leading-relaxed" data-ref="https://www.browserless.io/blog/chrome-remote-debugging|1">
+                      <i data-lucide="triangle-alert" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+                      Предупреждение: Порт удаленной отладки (--remote-debugging-port) является чувствительной функцией безопасности. Он должен быть привязан только к локальному использованию (например, localhost) и никогда не должен быть открыт на публичном интерфейсе.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hs-accordion card-interactive bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+              <button class="hs-accordion-toggle w-full flex justify-between items-center p-4 text-left hover:bg-primary-50 dark:hover:bg-gray-700/50 transition-colors rounded-xl" id="hs-arch-2">
+                <div class="flex items-center space-x-4">
+                  <div class="flex-shrink-0 w-12 h-12 bg-accent-100 dark:bg-accent-900/30 rounded-lg flex items-center justify-center">
+                    <i data-lucide="file-code" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                  </div>
+                  <span class="font-semibold text-lg text-accent-700 dark:text-accent-300">Параметры командной строки</span>
+                </div>
+                <i data-lucide="chevron-down" class="hs-accordion-active:rotate-180 transition-transform duration-300 w-5 h-5 text-accent-600 dark:text-accent-400"></i>
+              </button>
+              <div id="hs-collapse-arch-2" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300" aria-labelledby="hs-arch-2">
+                <div class="p-6 pt-0 space-y-4">
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://peter.sh/experiments/chromium-command-line-switches/|14">
+                    Chrome поддерживает переключатель --user-data-dir для указания каталога данных пользователя, где браузер ищет все свое состояние (профили, cookies, локальное хранилище), позволяя внешним скриптам указывать на существующие портативные профили.
+                  </p>
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://stackoverflow.com/questions/37590272/command-line-parameters-for-firefox|48">
+                    Параметры командной строки для Firefox включают -P &lt;profile&gt; для запуска с конкретным профилем и --profile &lt;path&gt; для запуска с профилем по указанному пути.
+                  </p>
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://groups.google.com/g/selenium-users/c/RMuo7l222g8|3">
+                    В Selenium с ChromeDriver аргумент командной строки --user-data-dir используется для указания пути к пользовательскому каталогу данных. Это позволяет автоматизации сохранять cookies, локальное хранилище и другое состояние браузера между сессиями.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="hs-accordion card-interactive bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+              <button class="hs-accordion-toggle w-full flex justify-between items-center p-4 text-left hover:bg-primary-50 dark:hover:bg-gray-700/50 transition-colors rounded-xl" id="hs-arch-3">
+                <div class="flex items-center space-x-4">
+                  <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                    <i data-lucide="folder-tree" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                  </div>
+                  <span class="font-semibold text-lg text-primary-700 dark:text-primary-300">Управление профилями</span>
+                </div>
+                <i data-lucide="chevron-down" class="hs-accordion-active:rotate-180 transition-transform duration-300 w-5 h-5 text-primary-600 dark:text-primary-400"></i>
+              </button>
+              <div id="hs-collapse-arch-3" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300" aria-labelledby="hs-arch-3">
+                <div class="p-6 pt-0 space-y-4">
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://portableapps.com/node/5376|10">
+                    Каталог профиля для стандартной установки Portable Firefox находится по адресу x:\PortableApps\FirefoxPortable\Data, где 'x' - буква диска USB-накопителя. Этот каталог содержит все пользовательские данные, включая закладки, расширения и настройки.
+                  </p>
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://www.minjusticia.gov.co/programas-co/MASC/Documents/JSP/navegador/help.html|12">
+                    Профили Chrome Portable хранятся в каталоге Data\profile. Полный профиль включает папку Default, содержащую пользовательские данные, такие как cookies и локальное хранилище, а также файл Local State.
+                  </p>
+                  <div class="pl-4 pr-3 py-3 border-l-4 border-primary-500 bg-primary-50/40 dark:bg-primary-900/30 rounded-r-lg">
+                    <p class="text-sm font-medium text-primary-900 dark:text-primary-100 leading-relaxed" data-ref="https://portableapps.com/node/5376|10">
+                      <i data-lucide="circle-check" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+                      Ключевое преимущество: Встроенный менеджер профилей Firefox (-P) не работает с портативными версиями, поэтому пользователи создают пользовательские скрипты для модификации файла FirefoxPortable.ini.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CDP Protocol Section -->
+    <section id="cdp" class="py-20 bg-primary-50/50 dark:bg-gray-800" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-primary-700 dark:text-primary-300">
+          Протокол удаленной отладки (CDP)
+        </h2>
+
+        <div class="grid md:grid-cols-2 gap-8 items-start mb-12">
+          <div class="space-y-6">
+            <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300" data-ref="https://www.browserless.io/blog/chrome-remote-debugging|1">
+              Основы Chrome DevTools Protocol
+            </h3>
+            <p class="text-gray-700 dark:text-gray-300">
+              Для автоматизации целей, когда видимое окно браузера не нужно, флаг --headless должен быть добавлен к команде запуска Chrome при использовании удаленной отладки. Raw данные целей из экземпляра Chrome с включенной отладкой можно получить через JSON-конечные точки.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300">
+              Список всех отладочных вкладок доступен по адресу <span class="mx-1 px-1.5 py-0.5 rounded-md bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 font-semibold text-sm">http://localhost:9222/json</span>, в то время как URL-адрес отладчика WebSocket на уровне браузера находится по адресу <span class="mx-1 px-1.5 py-0.5 rounded-md bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 font-semibold text-sm">/json/version</span>.
+            </p>
+          </div>
+
+          <div class="card-interactive p-6 rounded-xl shadow-md bg-white/90 backdrop-blur-sm dark:bg-gray-900 h-80">
+            <canvas id="cdpChart"></canvas>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300">
+            Подключение к различным движкам
+          </h3>
+          
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+              <div class="flex items-center space-x-3 mb-4">
+                <i data-lucide="chrome" class="w-8 h-8 text-primary-600 dark:text-primary-400"></i>
+                <h4 class="text-lg font-semibold text-primary-700 dark:text-primary-300" data-ref="https://github.com/feder-cr/invisible_playwright/wiki/playwright-connect-over-cdp-firefox|28">Chromium</h4>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                Подключение через chromium.connect_over_cdp(http_url) к конечной точке, открытой с флагом --remote-debugging-port. Поддерживает создание новых контекстов и страниц.
+              </p>
+            </div>
+
+            <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+              <div class="flex items-center space-x-3 mb-4">
+                <i data-lucide="firefox" class="w-8 h-8 text-accent-600 dark:text-accent-400"></i>
+                <h4 class="text-lg font-semibold text-accent-700 dark:text-accent-300" data-ref="https://github.com/feder-cr/invisible_playwright/wiki/playwright-connect-over-cdp-firefox|28">Firefox</h4>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                Подключение через firefox.connect(ws_url) к конечной точке Juggler, опубликованной браузерным сервером, запущенным с launch-server. Создает только один контекст по умолчанию.
+              </p>
+            </div>
+          </div>
+
+          <div class="pl-4 pr-3 py-3 border-l-4 border-amber-500 bg-amber-50/40 dark:bg-amber-900/30 rounded-r-lg">
+            <p class="text-sm font-medium text-amber-900 dark:text-amber-100 leading-relaxed" data-ref="https://github.com/feder-cr/invisible_playwright/wiki/playwright-connect-over-cdp-firefox|28">
+              <i data-lucide="triangle-alert" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+              Ограничение: Подключение к запущенному экземпляру Firefox через playwright.sync_api.BrowserType.connect_over_cdp() невозможно, потому что Firefox не раскрывает конечную точку Chrome DevTools Protocol (CDP).
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Profile Management Section -->
+    <section id="profiles" class="py-20 bg-white/80 dark:bg-gray-900" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-primary-700 dark:text-primary-300">
+          Управление пользовательскими профилями
+        </h2>
+
+        <div class="space-y-8">
+          <div class="grid md:grid-cols-2 gap-8 items-center">
+            <img
+              src="https://cdn.qwenlm.ai/d09b27ad-8fe1-4a11-b761-510992da8aba/c7b08fbb-91b0-42dc-b1ab-a7ccc6af5d70/38c4ffa9-1afe-4816-b505-dc905b03a229.png?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZXNvdXJjZV91c2VyX2lkIjoiZDA5YjI3YWQtOGZlMS00YTExLWI3NjEtNTEwOTkyZGE4YWJhIiwicmVzb3VyY2VfaWQiOiJjN2IwOGZiYi05MWIwLTQyZGMtYjFhYi1hN2NjYzZhZjVkNzAiLCJyZXNvdXJjZV9jaGF0X2lkIjpudWxsfQ.ACcC9hBwmt66QaH1lbEA1I8QzbdsCHId1EnUUtgG7Zg"
+              alt="Диаграмма управления профилями: три прямоугольных блока с закругленными углами расположены вертикально на светло-сером фоне #f3f4f6. Верхний блок имеет заголовок 'Chrome' с синей иконкой #1a73b3 и текстом 'user-data-dir=/path/to/profile'. Средний блок имеет заголовок 'Firefox' с фиолетовой иконкой #6366f1 и текстом '-profile /path/to/profile'. Нижний блок имеет заголовок 'Playwright' с синей иконкой #1a73b3 и текстом 'storageState(auth-state.json)'. Каждый блок имеет белый фон #ffffff, тонкие синие рамки #1a73b3, и небольшие тени. Между блоками вертикальные стрелки #6366f1 указывают направление потока данных. Все текстовые метки выполнены на русском языке черным шрифтом #1f2937. Композиция симметричная, визуально сбалансированная."
+              class="w-full rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300"
+            />
+
+            <div class="space-y-6">
+              <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300" data-ref="https://yashaka.github.io/selene/faq/custom-user-profile-howto/|27">
+                Запуск с пользовательскими профилями
+              </h3>
+              <p class="text-gray-700 dark:text-gray-300">
+                Для запуска Google Chrome с пользовательским профилем используйте аргумент --user-data-dir для указания каталога, содержащего данные пользователя. Если существует несколько профилей в этом каталоге, также используйте аргумент --profile-directory для выбора конкретного.
+              </p>
+              <p class="text-gray-700 dark:text-gray-300">
+                Для Firefox пользовательский профиль можно запустить с помощью переключателя командной строки -profile, за которым следует путь к корневому каталогу профиля. Путь можно найти в браузере, перейдя на about:profiles.
+              </p>
+              
+              <div class="pl-4 pr-3 py-3 border-l-4 border-primary-500 bg-primary-50/40 dark:bg-primary-900/30 rounded-r-lg">
+                <p class="text-sm font-medium text-primary-900 dark:text-primary-100 leading-relaxed" data-ref="https://yashaka.github.io/selene/faq/custom-user-profile-howto/|27">
+                  <i data-lucide="info" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+                  Распространенная ошибка: Файл DevToolsActivePort не существует. Это обычно указывает на то, что указанный --profile-directory не существует или что тот же профиль уже запущен в другом окне.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300">
+              Сохранение и восстановление сессий
+            </h3>
+
+            <div class="hs-accordion-group space-y-4">
+              <div class="hs-accordion card-interactive bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <button class="hs-accordion-toggle w-full flex justify-between items-center p-4 text-left hover:bg-primary-50 dark:hover:bg-gray-700/50 transition-colors rounded-xl" id="hs-profile-1">
+                  <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                      <i data-lucide="save" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                    </div>
+                    <span class="font-semibold text-lg text-primary-700 dark:text-primary-300">Механизм storageState</span>
+                  </div>
+                  <i data-lucide="chevron-down" class="hs-accordion-active:rotate-180 transition-transform duration-300 w-5 h-5 text-primary-600 dark:text-primary-400"></i>
+                </button>
+                <div id="hs-collapse-profile-1" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300" aria-labelledby="hs-profile-1">
+                  <div class="p-6 pt-0 space-y-4">
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://playwright.dev/docs/api/class-browsertype|5">
+                      Метод launchPersistentContext(userDataDir) запускает браузер, который использует постоянное хранилище, расположенное в указанном каталоге userDataDir. Этот каталог хранит данные сессии браузера, такие как cookies и локальное хранилище.
+                    </p>
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://playwright.dev/python/docs/auth|36">
+                      Playwright предоставляет метод browser_context.storage_state() для получения полного состояния аутентификации из существующего контекста браузера. Это состояние затем можно сохранить в файл с помощью параметра path (например, context.storage_state(path="state.json")).
+                    </p>
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://forum.cursor.com/t/add-persistent-browser-state-cookie-configuration-to-built-in-playwright-mcp-server/136489|18">
+                      API storageState в Playwright позволяет сериализовать и десериализовать состояние сессии браузера (cookies, localStorage). Скрипт может сохранить это состояние в файл с помощью context.storage_state(path='auth-state.json'), а другой скрипт может восстановить его, передав путь к storage_state при запуске нового контекста.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="hs-accordion card-interactive bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <button class="hs-accordion-toggle w-full flex justify-between items-center p-4 text-left hover:bg-primary-50 dark:hover:bg-gray-700/50 transition-colors rounded-xl" id="hs-profile-2">
+                  <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-accent-100 dark:bg-accent-900/30 rounded-lg flex items-center justify-center">
+                      <i data-lucide="shield-check" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                    </div>
+                    <span class="font-semibold text-lg text-accent-700 dark:text-accent-300">Защита аутентификационных данных</span>
+                  </div>
+                  <i data-lucide="chevron-down" class="hs-accordion-active:rotate-180 transition-transform duration-300 w-5 h-5 text-accent-600 dark:text-accent-400"></i>
+                </button>
+                <div id="hs-collapse-profile-2" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300" aria-labelledby="hs-profile-2">
+                  <div class="p-6 pt-0 space-y-4">
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://playwright.dev/python/docs/auth|36">
+                      По соображениям безопасности рекомендуется хранить файлы состояния аутентификации в выделенном каталоге (например, playwright/.auth) и добавлять этот каталог в .gitignore, чтобы предотвратить фиксацию конфиденциальной информации, такой как cookies и заголовки.
+                    </p>
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://roundproxies.com/blog/authentication-playwright/|39">
+                      Файлы состояния аутентификации содержат активные токены сессии, которые никогда не должны фиксироваться в системе контроля версий. Их следует хранить в каталоге (например, .auth), который явно добавлен в файл .gitignore.
+                    </p>
+                    
+                    <div class="pl-4 pr-3 py-3 border-l-4 border-amber-500 bg-amber-50/40 dark:bg-amber-900/30 rounded-r-lg">
+                      <p class="text-sm font-medium text-amber-900 dark:text-amber-100 leading-relaxed" data-ref="https://roundproxies.com/blog/authentication-playwright/|39">
+                        <i data-lucide="triangle-alert" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+                        Общий подвох: Устаревшие состояния аутентификации. Рекомендуется реализовать проверку в скрипте настройки для верификации возраста существующего файла состояния. Если файл старше типичного времени жизни сессии (например, 24 часа), скрипт должен удалить старый файл и выполнить свежую процедуру входа для получения действительного состояния.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="hs-accordion card-interactive bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <button class="hs-accordion-toggle w-full flex justify-between items-center p-4 text-left hover:bg-primary-50 dark:hover:bg-gray-700/50 transition-colors rounded-xl" id="hs-profile-3">
+                  <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                      <i data-lucide="layers" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                    </div>
+                    <span class="font-semibold text-lg text-primary-700 dark:text-primary-300">Многопрофильная поддержка</span>
+                  </div>
+                  <i data-lucide="chevron-down" class="hs-accordion-active:rotate-180 transition-transform duration-300 w-5 h-5 text-primary-600 dark:text-primary-400"></i>
+                </button>
+                <div id="hs-collapse-profile-3" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300" aria-labelledby="hs-profile-3">
+                  <div class="p-6 pt-0 space-y-4">
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://playwright.dev/docs/auth|37">
+                      Для сценариев параллельного тестирования, где несколько рабочих процессов работают одновременно, можно реализовать стратегию аутентификации на основе рабочих процессов. Это включает создание уникальной учетной записи для каждого рабочего процесса (используя test.info().parallelIndex) и сохранение его аутентифицированного состояния в уникальный файл в каталоге вывода рабочего процесса.
+                    </p>
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://roundproxies.com/blog/authentication-playwright/|39">
+                      Можно управлять несколькими различными ролями пользователей, создавая отдельные файлы состояния аутентификации. Например, один проект настройки может создать admin.json, а другой может создать user.json. Тесты затем могут указать, какую роль они требуют, установив опцию storageState для группы тестов или отдельного теста.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Security Section -->
+    <section id="security" class="py-20 bg-accent-50/50 dark:bg-gray-800" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-accent-700 dark:text-accent-300">
+          Безопасность и защита от обнаружения
+        </h2>
+
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
+          <div class="card-interactive p-6 bg-white/90 backdrop-blur-sm dark:bg-gray-900 rounded-xl shadow-md">
+            <div class="flex items-center space-x-4 mb-4">
+              <div class="flex-shrink-0 w-12 h-12 bg-accent-100 dark:bg-accent-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="shield" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-accent-700 dark:text-accent-300" data-ref="https://botbrowser.io/en/blog/what-is-browser-fingerprinting/|33">
+                Отпечатки браузеров
+              </h3>
+            </div>
+            <p class="text-gray-700 dark:text-gray-300 text-sm mb-4">
+              Браузерное отпечаткование идентифицирует браузеры путем сбора сигналов из нескольких категорий: свойства Navigator (User Agent, Platform, Hardware Concurrency), Canvas/2D Rendering, WebGL/WebGPU, Audio Processing, Fonts, размеры экрана/окна, CSS Media Features, Performance/Timing и Engine Internals (например, глубина стека JavaScript).
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Исследование EFF Panopticlick обнаружило, что <span class="mx-1 px-1.5 py-0.5 rounded-md bg-accent-100 dark:bg-accent-900/30 text-accent-800 dark:text-accent-300 font-semibold text-sm">83.6%</span> более чем 200,000 протестированных конфигураций браузеров были уникально идентифицируемыми.
+            </p>
+          </div>
+
+          <div class="card-interactive p-6 bg-white/90 backdrop-blur-sm dark:bg-gray-900 rounded-xl shadow-md">
+            <div class="flex items-center space-x-4 mb-4">
+              <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="eye-off" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-primary-700 dark:text-primary-300" data-ref="https://brightdata.com/blog/how-tos/avoid-bot-detection-with-playwright-stealth|44">
+                Обнаружение Playwright
+              </h3>
+            </div>
+            <p class="text-gray-700 dark:text-gray-300 text-sm mb-4">
+              Playwright может быть обнаружен и заблокирован технологиями анти-бот, потому что он автоматически изменяет специальные свойства и заголовки при управлении headless-браузерами. Ключевой пример - установка настройки Chrome navigator.webdriver в true, которую решения обнаружения ботов анализируют для идентификации автоматизированных скриптов.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Пакет playwright-stealth - расширение для Playwright, предназначенное для переопределения конкретных конфигураций для избежания обнаружения ботов. Он удаляет свойство navigator.webdriver и убирает строку "HeadlessChrome" из заголовка User-Agent.
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <h3 class="text-2xl font-semibold text-accent-700 dark:text-accent-300">
+            Механизмы защиты от обнаружения
+          </h3>
+
+          <div class="grid md:grid-cols-3 gap-6">
+            <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+              <div class="flex items-center space-x-3 mb-4">
+                <i data-lucide="palette" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                <h4 class="text-base font-semibold text-accent-700 dark:text-accent-300" data-ref="https://botbrowser.io/en/blog/what-is-browser-fingerprinting/|33">Спуфинг отпечатков</h4>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                BotBrowser обеспечивает комплексную защиту от отпечатков, контролируя сигналы на уровне движка через полные профили устройств. Этот подход настраивает каждую подсистему одновременно для представления одного согласованного цифрового удостоверения устройства.
+              </p>
+            </div>
+
+            <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+              <div class="flex items-center space-x-3 mb-4">
+                <i data-lucide="mouse-pointer-click" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                <h4 class="text-base font-semibold text-primary-700 dark:text-primary-300" data-ref="https://github.com/daijro/camoufox|42">Имитация поведения</h4>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                Camoufox использует порт библиотеки Cursory для имитации движения мыши. Вместо простого алгоритма он воспроизводит записи человеческих движений, включая их уникальное время, паузы и перекрытия, чтобы создать более реалистичное поведение.
+              </p>
+            </div>
+
+            <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+              <div class="flex items-center space-x-3 mb-4">
+                <i data-lucide="database" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                <h4 class="text-base font-semibold text-accent-700 dark:text-accent-300" data-ref="https://stackoverflow.com/questions/79582148/how-to-avoid-detection-when-using-cdp-chrome-devtools-protocol-with-playwright|43">CDP-обнаружение</h4>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                Веб-сайты, которые обнаруживают автоматизацию браузеров, могут специально идентифицировать использование Chrome DevTools Protocol (CDP). Пользователи сообщили, что их боты Playwright были помечены как боты, даже когда все методы спуфинга отпечатков работали.
+              </p>
+            </div>
+          </div>
+
+          <div class="pl-4 pr-3 py-3 border-l-4 border-amber-500 bg-amber-50/40 dark:bg-amber-900/30 rounded-r-lg">
+            <p class="text-sm font-medium text-amber-900 dark:text-amber-100 leading-relaxed" data-ref="https://scrapfly.io/blog/posts/playwright-stealth-bypass-bot-detection|45">
+              <i data-lucide="triangle-alert" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+              Ограничения: Эффективность плагинов скрытности ограничена; они не решают проблемы репутации IP, отпечатков TLS, JavaScript-вызовов от продвинутых систем анти-бот или поведенческого анализа на основе пользовательских взаимодействий.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Integration Section -->
+    <section id="integration" class="py-20 bg-white/80 dark:bg-gray-900" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-primary-700 dark:text-primary-300">
+          Интеграция в MEGA TANK v3.0
+        </h2>
+
+        <div class="space-y-8">
+          <div class="grid md:grid-cols-2 gap-8 items-start">
+            <div class="space-y-6">
+              <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300" data-ref="https://mcpservers.org/servers/Rainmen-xia/chrome-debug-mcp-server|4">
+                Архитектура подключения
+              </h3>
+              <p class="text-gray-700 dark:text-gray-300">
+                Сервер Chrome Debug MCP демонстрирует автоматизацию существующего браузера Chrome путем подключения к его порту отладки (например, --remote-debugging-port=9222). Это позволяет инструментам автоматизации взять на себя сессию, в которой вошел пользователь, без необходимости для инструмента обрабатывать аутентификацию.
+              </p>
+              <p class="text-gray-700 dark:text-gray-300">
+                Архитектура подключает клиента автоматизации (MCP Client) к серверу (Chrome Debug MCP Server) через стандартный ввод/вывод (stdio), который затем устанавливает соединение WebSocket с Chrome DevTools Protocol (CDP) на указанном порту отладки.
+              </p>
+            </div>
+
+            <div class="card-interactive p-6 bg-primary-50/50 dark:bg-primary-900/20 rounded-xl shadow-md">
+              <h4 class="text-lg font-semibold text-primary-700 dark:text-primary-300 mb-4" data-ref="https://mcpservers.org/servers/Rainmen-xia/chrome-debug-mcp-server|4">
+                Интеллектуальное управление вкладками
+              </h4>
+              <p class="text-gray-700 dark:text-gray-300 text-sm mb-4">
+                Ключевая особенность - 'Интеллектуальное управление вкладками', которое повторно использует существующие вкладки для того же домена, если они уже открыты в подключенном экземпляре Chrome, тем самым избегая избыточных входов или открытия вкладок во время автоматизации.
+              </p>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                Сервер поддерживает среды Dockerized, позволяя ему автоматически обнаруживать и подключаться к экземплярам Chrome, работающим внутри контейнеров, при условии, что они раскрывают порт отладки (например, -p 9222:9222) и используют --remote-debugging-address=0.0.0.0.
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300">
+              Потокобезопасная реализация
+            </h3>
+
+            <div class="grid md:grid-cols-2 gap-6">
+              <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+                <div class="flex items-center space-x-3 mb-4">
+                  <i data-lucide="lock" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                  <h4 class="text-base font-semibold text-primary-700 dark:text-primary-300" data-ref="https://medium.com/analytics-vidhya/how-to-create-a-thread-safe-singleton-class-in-python-822e1170a7f6|21">Одиночный класс</h4>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 text-sm">
+                  Потокобезопасный одиночный класс может быть реализован в Python с использованием __new__ и threading.Lock. Экземпляр создается только если он не существует (cls._instance is None). Чтобы предотвратить условия гонки, дополнительная проверка выполняется внутри контекста блокировки.
+                </p>
+              </div>
+
+              <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+                <div class="flex items-center space-x-3 mb-4">
+                  <i data-lucide="activity" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                  <h4 class="text-base font-semibold text-accent-700 dark:text-accent-300" data-ref="https://blog.adarshd.dev/posts/thread-safety-in-python/|22">Глобальный блокировщик</h4>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 text-sm">
+                  В CPython Глобальный блокировщик интерпретатора (GIL) гарантирует, что только один поток выполняет байт-код Python одновременно. Это делает многопоточность эффективной для задач, ограниченных вводом-выводом, но не для задач, ограниченных ЦП. Интервал переключения контекста по умолчанию составляет <span class="mx-1 px-1.5 py-0.5 rounded-md bg-accent-100 dark:bg-accent-900/30 text-accent-800 dark:text-accent-300 font-semibold text-sm">5 миллисекунд</span>.
+                </p>
+              </div>
+            </div>
+
+            <div class="pl-4 pr-3 py-3 border-l-4 border-primary-500 bg-primary-50/40 dark:bg-primary-900/30 rounded-r-lg">
+              <p class="text-sm font-medium text-primary-900 dark:text-primary-100 leading-relaxed" data-ref="https://refactoring.guru/design-patterns/singleton/python/example|23">
+                <i data-lucide="info" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+                Предупреждение: Шаблон Одиночный часто считается антипаттерном в Python из-за его негативного влияния на модульность кода. Он делает классы зависимыми от конкретного глобального состояния, усложняя юнит-тестирование, поскольку зависимости нельзя легко мокать или заменить.
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300">
+              Механизмы обнаружения браузеров
+            </h3>
+
+            <div class="grid md:grid-cols-3 gap-6">
+              <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+                <div class="flex items-center space-x-3 mb-4">
+                  <i data-lucide="search" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                  <h4 class="text-base font-semibold text-primary-700 dark:text-primary-300" data-ref="https://github.com/jifengwu2k/get-chrome-paths|50">get-chrome-paths</h4>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 text-sm">
+                  Кроссплатформенная утилита Python для обнаружения установленных путей к браузерам Chrome, Chromium и Microsoft Edge на Windows, macOS и Linux. Поддерживает обнаружение через общие пути реестра на Windows, общие пути приложений на macOS и общие пути установки на Linux.
+                </p>
+              </div>
+
+              <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+                <div class="flex items-center space-x-3 mb-4">
+                  <i data-lucide="scan" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                  <h4 class="text-base font-semibold text-accent-700 dark:text-accent-300" data-ref="https://github.com/rahilcodz/browser-path-detector|51">browser-path-detector</h4>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 text-sm">
+                  Скрипт на чистом Python, использующий модули os и subprocess для автоматического обнаружения установленных путей к браузерам в системе. Разработан для интеграции в рабочие процессы автоматизации для таких инструментов, как Selenium или PyAutoGUI.
+                </p>
+              </div>
+
+              <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+                <div class="flex items-center space-x-3 mb-4">
+                  <i data-lucide="package" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                  <h4 class="text-base font-semibold text-primary-700 dark:text-primary-300" data-ref="https://github.com/roniemartinez/browsers|9">roniemartinez/browsers</h4>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 text-sm">
+                  Библиотека Python для обнаружения и запуска браузеров, позволяющая автоматически определять установленные браузеры на машине macOS, что является ключевым элементом для интеграции внешних исполняемых файлов.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Conclusion Section -->
+    <section id="conclusion" class="py-20 bg-primary-50/50 dark:bg-gray-800" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-primary-700 dark:text-primary-300">
+          Заключение и рекомендации
+        </h2>
+
+        <div class="space-y-6">
+          <p class="text-lg text-gray-700 dark:text-gray-300 leading-relaxed" data-ref="https://playwright.dev/docs/api/class-browsertype|5">
+            Playwright предлагает метод connectOverCDP для подключения к существующему экземпляру браузера на основе Chromium с использованием Chrome DevTools Protocol (CDP). Это соединение устанавливается путем предоставления URL-адреса конечной точки веб-сокета CDP. Этот метод поддерживается только для браузеров на основе Chromium и имеет более низкое качество, чем родной протокол Playwright.
+          </p>
+
+          <div class="grid md:grid-cols-2 gap-8">
+            <div class="card-interactive p-6 bg-white/90 backdrop-blur-sm dark:bg-gray-900 rounded-xl shadow-md">
+              <h3 class="text-xl font-semibold text-primary-700 dark:text-primary-300 mb-4" data-ref="https://stackoverflow.com/questions/62281859/how-to-use-installed-version-of-chrome-in-playwright|7">
+                Ключевые рекомендации
+              </h3>
+              <ul class="space-y-3">
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="circle-check" class="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Версия внешнего Chrome должна совпадать с версией Chromium, с которым был построен Playwright</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="circle-check" class="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Используйте --user-data-dir для указания каталога пользовательских данных</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="circle-check" class="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Реализуйте потокобезопасную архитектуру с использованием threading.Lock</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="circle-check" class="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Используйте storageState для сохранения и восстановления аутентифицированных сессий</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="card-interactive p-6 bg-white/90 backdrop-blur-sm dark:bg-gray-900 rounded-xl shadow-md">
+              <h3 class="text-xl font-semibold text-accent-700 dark:text-accent-300 mb-4" data-ref="https://developer.chrome.com/blog/remote-debugging-port|2">
+                Ограничения и риски
+              </h3>
+              <ul class="space-y-3">
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="triangle-alert" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Chrome 136+ игнорирует переключатели отладки при использовании с каталогом данных пользователя по умолчанию</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="triangle-alert" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Только Chromium поддерживает подключение через CDP, Firefox требует Juggler</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="triangle-alert" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Файлы состояния аутентификации содержат конфиденциальную информацию и не должны фиксироваться</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="triangle-alert" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Playwright только с встроенными браузерами, использование внешних исполняемых файлов на ваш страх и риск</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="pl-4 pr-3 py-3 border-l-4 border-primary-500 bg-primary-50/40 dark:bg-primary-900/30 rounded-r-lg">
+            <p class="text-sm font-medium text-primary-900 dark:text-primary-100 leading-relaxed" data-ref="https://playwright.dev/docs/api/class-browsertype|5">
+              <i data-lucide="info" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+              Ключевой вывод: Для запуска внешнего исполняемого файла браузера методы launch() и launchServer() Playwright принимают опцию executablePath. Однако документация явно предупреждает: "Обратите внимание, что Playwright работает только с встроенными Chromium, Firefox или WebKit, используйте на свой страх и риск."
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-primary-700 dark:bg-gray-950 text-white py-8">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <p class="text-sm opacity-80">
+        © 2024 MEGA TANK v3.0. Исследование архитектуры интеграции внешних браузеров. Все права защищены.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Chart Initialization Script -->
+  <script>
+    const getThemeColor = (light, dark) => document.body.classList.contains('dark') ? dark : light;
+    let charts = {};
+    
+    const getColors = () => ({
+      primary: getThemeColor('hsl(210, 75%, 25%)', 'hsl(210, 75%, 65%)'),
+      accent: getThemeColor('hsl(240, 65%, 40%)', 'hsl(240, 65%, 65%)'),
+      text: getThemeColor('#374151', '#d1d5db'),
+      grid: getThemeColor('#e5e7eb', '#374151')
+    });
+    
+    const updateCharts = () => {
+      const { text, grid } = getColors();
+      
+      Object.values(charts).forEach(chart => {
+        if (chart?.options) {
+          if (chart.options.plugins?.legend?.labels) chart.options.plugins.legend.labels.color = text;
+          if (chart.options.plugins?.title) chart.options.plugins.title.color = text;
+          if (chart.options.scales) {
+            Object.values(chart.options.scales).forEach(scale => {
+              if (scale.ticks) scale.ticks.color = text;
+              if (scale.grid) scale.grid.color = grid;
+              if (scale.pointLabels) scale.pointLabels.color = text;
+              if (scale.title) scale.title.color = text;
+            });
+          }
+          chart.update('none');
+        }
+      });
+    };
+
+    // Data from https://botbrowser.io/en/blog/what-is-browser-fingerprinting/|33 - EFF Panopticlick study: 83.6% of browser configurations were uniquely identifiable
+    const cdpData = {
+      labels: ['Уникально идентифицируемые', 'Неуникальные'],
+      datasets: [{
+        label: 'Процент уникальных отпечатков',
+        data: [83.6, 16.4], // Exact data from https://botbrowser.io/en/blog/what-is-browser-fingerprinting/|33
+        backgroundColor: [
+          getThemeColor('hsl(210, 75%, 40%)', 'hsl(210, 75%, 55%)'),
+          getThemeColor('hsl(240, 65%, 55%)', 'hsl(240, 65%, 65%)')
+        ]
+      }]
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+      AOS.init({ duration: 800, once: true });
+      
+      const { text, grid } = getColors();
+      
+      const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: text, font: { size: 12 } } } },
+        scales: {
+          x: { ticks: { color: text }, grid: { color: grid } },
+          y: { beginAtZero: true, ticks: { color: text }, grid: { color: grid } }
+        }
+      };
+
+      // CDP Protocol Chart
+      if (document.getElementById('cdpChart')) {
+        charts.cdp = new Chart(document.getElementById('cdpChart'), {
+          type: 'bar',
+          data: cdpData,
+          options: { 
+            ...commonOptions, 
+            plugins: { 
+              legend: { display: false },
+              title: {
+                display: true,
+                text: 'Процент уникальных отпечатков браузеров',
+                color: text,
+                font: { size: 14, weight: 'bold' }
+              }
+            }
+          }
+        });
+      }
+      
+      new MutationObserver(() => {
+        cdpData.datasets[0].backgroundColor = [
+          getThemeColor('hsl(210, 75%, 40%)', 'hsl(210, 75%, 55%)'),
+          getThemeColor('hsl(240, 65%, 55%)', 'hsl(240, 65%, 65%)')
+        ];
+        updateCharts();
+      }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    });
+
+    // Progress bar
+    window.addEventListener('scroll', () => {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progressBar').style.width = scrolled + '%';
+    });
+  </script>
+
+  <!-- Citation System -->
+  <script>
+    function initCitationSystem() {
+      let i = 1, map = new Map();
+      document.querySelectorAll('[data-ref]').forEach(el => {
+        if (el.dataset.citationProcessed) return;
+        const raw = (el.getAttribute('data-ref')||'').trim();
+        if (!raw) return;
+
+        const parts = raw.split('|');
+        const url = parts[0].trim();
+        const idx = (parts[1]||'').trim() || map.get(raw) || (map.set(raw, String(i)), String(i++));
+
+        if (!el.textContent || !el.textContent.trim()) { el.dataset.citationProcessed = 'true'; return; }
+
+        const btn = document.createElement('sup'); btn.textContent = String(idx);
+        Object.assign(btn.style, { fontSize:'8px', color:'#fff', cursor:'pointer', top: '1px', fontWeight:'bold', backgroundColor:'#0284c7', borderRadius:'50%', transition:'all .15s', userSelect:'none', minWidth:'19px', height:'19px', marginLeft:'6px', display:'inline-flex', alignItems:'center', justifyContent:'center', boxShadow:'0 1px 3px rgba(0,0,0,.2)', lineHeight:'1'});
+        btn.addEventListener('mouseenter', ()=> Object.assign(btn.style, { backgroundColor:'#0369a1', transform:'scale(1.12)' }));
+        btn.addEventListener('mouseleave', ()=> Object.assign(btn.style, { backgroundColor:'#0284c7', transform:'scale(1)' }));
+        btn.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); window.open(url, '_blank'); });
+
+        el.appendChild(btn); el.dataset.citationProcessed = 'true';
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initCitationSystem);
+  </script>
+</body>
+</html>

@@ -1,0 +1,1144 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+================================================================================
+ MEGA TANK v3.0 — UNIVERSAL DOCUMENTATION SCRAPER
+ Пересобран: 30.06.2026
+================================================================================
+ Что делает:
+   • Берёт список URL (по одному в строке)
+   • Сохраняет каждую страницу в PDF / HTML / TXT / DOCX / Markdown
+   • Может объединить всё в один файл (работает для ЛЮБОГО формата)
+   • Создаёт рядом с собой папку MEGA_TANK_<дата_время> и пишет ВСЁ туда:
+       - отдельные файлы по каждому URL
+       - объединённый файл (если включено)
+       - manifest.json  — машиночитаемая сводка
+       - INDEX.md        — человекочитаемая сводная таблица со ссылками
+   • Зависимости ставит сама при первом запуске (включая браузер Chromium)
+
+ Что нового по сравнению с v2.0:
+   • Исправлен краш при DOCX / объединении PDF (отсутствовавшие импорты)
+   • Исправлен конфликт locale("en-US") + timezone("Europe/Moscow") —
+     теперь они всегда согласованы (меньше шансов спалиться на fingerprint'е)
+   • wait_until='networkidle' больше не вешает скрапер намертво на сайтах
+     с вебсокетами/чатами/аналитикой — теперь поэтапное ожидание с fallback
+   • Параллельность (1–5 потоков), у каждого свой инстанс Playwright
+   • Повторные попытки с ротацией User-Agent при ошибках
+   • Новый формат — Markdown (.md), удобно скармливать ИИ как контекст
+   • Объединение теперь работает для PDF / HTML / TXT / DOCX / Markdown
+   • Manifest.json + INDEX.md — сводка по всем источникам
+   • Fallback через requests+BeautifulSoup, если браузер не смог
+   • Быстрая DNS-проверка перед запуском тяжёлого браузера
+   • Доскролл страницы перед извлечением текста (lazy-load контент)
+   • Эвристика обнаружения блокировки (Cloudflare/капча/403/429)
+   • Кнопка "Стоп", потокобезопасный UI, кнопка "Открыть папку"
+================================================================================
+"""
+
+import sys
+import os
+import subprocess
+import importlib
+import threading
+import queue
+import time
+import random
+import re
+import json
+import socket
+import webbrowser
+from datetime import datetime
+from urllib.parse import urlparse
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+# ==============================================================================
+# КОНСТАНТЫ
+# ==============================================================================
+APP_NAME = "MEGA TANK"
+APP_VERSION = "3.0"
+BUILD_DATE = "30.06.2026"
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+REQUIRED_PACKAGES = [
+    ("requests", "requests"),
+    ("playwright", "playwright"),
+    ("pypdf", "pypdf"),
+    ("python-docx", "docx"),
+    ("beautifulsoup4", "bs4"),
+    ("markdownify", "markdownify"),
+]
+
+FORMAT_MAP = {
+    "PDF": "pdf",
+    "HTML": "html",
+    "TXT": "txt",
+    "DOCX": "docx",
+    "Markdown": "md",
+}
+
+BLOCKED_MARKERS = [
+    "just a moment", "checking your browser", "attention required",
+    "access denied", "are you a robot", "captcha", "cloudflare",
+    "rate limit exceeded", "403 forbidden", "request blocked",
+    "unusual traffic", "verify you are human", "bot detection",
+]
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+]
+
+# Согласованные пары locale/timezone — раньше locale=en-US жил с timezone=Europe/Moscow,
+# что само по себе подозрительно. Теперь пары логичны.
+LOCALE_TZ_PAIRS = [
+    ("en-US", "America/New_York"),
+    ("en-US", "America/Los_Angeles"),
+    ("en-US", "America/Chicago"),
+    ("en-GB", "Europe/London"),
+]
+
+VIEWPORTS = [
+    {"width": 1920, "height": 1080},
+    {"width": 1536, "height": 864},
+    {"width": 1440, "height": 900},
+    {"width": 1366, "height": 768},
+]
+
+STEALTH_INIT_SCRIPT = """
+(() => {
+    // Скрыть navigator.webdriver
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+
+    // Подделать plugins / mimeTypes (headless Chromium их не имеет)
+    Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5].map(() => ({ name: 'Chrome PDF Plugin' })),
+    });
+    Object.defineProperty(navigator, 'languages', {
+        get: () => ['en-US', 'en'],
+    });
+
+    // window.chrome — у настоящего Chrome он есть, у headless часто отсутствует
+    window.chrome = window.chrome || { runtime: {} };
+
+    // Подделать permissions.query, чтобы не выдавать автоматизацию
+    const origQuery = window.navigator.permissions && window.navigator.permissions.query;
+    if (origQuery) {
+        window.navigator.permissions.query = (parameters) => (
+            parameters && parameters.name === 'notifications'
+                ? Promise.resolve({ state: Notification.permission })
+                : origQuery(parameters)
+        );
+    }
+
+    // Лёгкая маскировка WebGL vendor/renderer
+    try {
+        const getParameter = WebGLRenderingContext.prototype.getParameter;
+        WebGLRenderingContext.prototype.getParameter = function (parameter) {
+            if (parameter === 37445) return 'Intel Inc.';
+            if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+            return getParameter.call(this, parameter);
+        };
+    } catch (e) {}
+})();
+"""
+
+# ==============================================================================
+# АВТОУСТАНОВКА ЗАВИСИМОСТЕЙ
+# ==============================================================================
+class AutoInstaller:
+    def __init__(self):
+        self.missing = []
+        self.installed = []
+
+    def check(self, pkg, imp):
+        try:
+            importlib.import_module(imp)
+            self.installed.append(pkg)
+            return True
+        except ImportError:
+            self.missing.append(pkg)
+            return False
+
+    def install(self, pkg):
+        print(f"📦 Установка {pkg}...")
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", pkg, "--quiet", "--upgrade"]
+            )
+            print(f"   ✅ {pkg}")
+            return True
+        except Exception as e:
+            print(f"   ❌ {pkg}: {e}")
+            return False
+
+    def chromium_ready(self):
+        """Проверяет, действительно ли Chromium доступен Playwright'у (а не просто
+        что пакет playwright импортируется — браузер мог быть не докачан)."""
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                browser.close()
+            return True
+        except Exception:
+            return False
+
+    def install_browsers(self):
+        print("🌐 Установка браузера Chromium для Playwright...")
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "playwright", "install", "chromium"]
+            )
+            print("   ✅ Chromium установлен")
+            return True
+        except Exception as e:
+            print(f"   ⚠️ Не удалось установить Chromium: {e}")
+            return False
+
+    def run(self):
+        print("=" * 70)
+        print(f"🔍 {APP_NAME} v{APP_VERSION} — ПРОВЕРКА ЗАВИСИМОСТЕЙ")
+        print("=" * 70)
+
+        for pkg, imp in REQUIRED_PACKAGES:
+            ok = self.check(pkg, imp)
+            print(f"{'✅' if ok else '❌'} {pkg}")
+
+        if self.missing:
+            print("\n" + "=" * 70)
+            print(f"🚀 УСТАНАВЛИВАЮ {len(self.missing)} ПАКЕТ(ОВ)...")
+            print("=" * 70)
+            for p in list(self.missing):
+                if self.install(p):
+                    self.missing.remove(p)
+
+        if not self.chromium_ready():
+            print("\n" + "=" * 70)
+            print("🌐 БРАУЗЕР CHROMIUM НЕ ГОТОВ — УСТАНАВЛИВАЮ...")
+            print("=" * 70)
+            self.install_browsers()
+            if not self.chromium_ready():
+                self.missing.append("chromium-browser")
+
+        print("\n" + "=" * 70)
+        if not self.missing:
+            print("✅ ВСЁ ГОТОВО! Запускаю интерфейс...")
+        else:
+            print(f"⚠️ Не установлено: {', '.join(self.missing)}")
+            print("   Попробуй запустить файл ещё раз или установить вручную:")
+            print(f"   {sys.executable} -m pip install " + " ".join(self.missing))
+        print("=" * 70)
+        return len(self.missing) == 0
+
+
+# ==============================================================================
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# ==============================================================================
+def sanitize(name):
+    name = re.sub(r'^https?://', '', name)
+    name = re.sub(r'[^\w\-_.]', '_', name)
+    name = name.strip('_')
+    while "__" in name:
+        name = name.replace("__", "_")
+    return (name or "page")[:100]
+
+
+def slugify(text):
+    text = re.sub(r'[^\w\-]+', '-', text.strip().lower())
+    return re.sub(r'-+', '-', text).strip('-')[:60] or "source"
+
+
+def human_size(num_bytes):
+    for unit in ("Б", "КБ", "МБ", "ГБ"):
+        if num_bytes < 1024:
+            return f"{num_bytes:.1f} {unit}" if unit != "Б" else f"{int(num_bytes)} {unit}"
+        num_bytes /= 1024
+    return f"{num_bytes:.1f} ТБ"
+
+
+def now_stamp():
+    return datetime.now().strftime("%Y-%m-%d_%H%M%S")
+
+
+def quick_dns_check(url):
+    """Быстрая проверка, что домен вообще резолвится — экономит время на мусорных URL."""
+    try:
+        host = urlparse(url).hostname
+        if not host:
+            return False, "Не удалось разобрать URL"
+        socket.setdefaulttimeout(5)
+        socket.gethostbyname(host)
+        return True, None
+    except Exception as e:
+        return False, f"DNS/сеть недоступны: {e}"
+
+
+def random_locale_tz():
+    return random.choice(LOCALE_TZ_PAIRS)
+
+
+def random_ua():
+    return random.choice(USER_AGENTS)
+
+
+def build_headers(ua):
+    is_mac = "Macintosh" in ua
+    is_linux = "X11; Linux" in ua
+    platform = '"macOS"' if is_mac else ('"Linux"' if is_linux else '"Windows"')
+    version = "148" if "148." in ua else "147"
+    return {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Sec-CH-UA": f'"Google Chrome";v="{version}", "Chromium";v="{version}", "Not=A?Brand";v="99"',
+        "Sec-CH-UA-Mobile": "?0",
+        "Sec-CH-UA-Platform": platform,
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
+        "User-Agent": ua,
+    }
+
+
+def looks_blocked(title, body_sample):
+    haystack = f"{title} {body_sample}".lower()
+    return any(marker in haystack for marker in BLOCKED_MARKERS)
+
+
+def autoscroll(page, steps=6, pause=0.35):
+    """Прокручивает страницу, чтобы триггернуть ленивую подгрузку контента."""
+    try:
+        for _ in range(steps):
+            page.mouse.wheel(0, random.randint(500, 900))
+            page.wait_for_timeout(int(pause * 1000))
+        page.evaluate("window.scrollTo(0, 0)")
+    except Exception:
+        pass
+
+
+def extract_page_text(page):
+    """Извлекает содержимое статьи, не смешивая его с навигацией и футером.
+
+    Сначала выбирается самый подходящий контейнер (article/main и типичные
+    content-классы). Если сайт не размечен семантически, используется body,
+    но boilerplate-узлы удаляются в браузере до извлечения текста.
+    """
+    selector = "article, main, [role='main'], .article, .post, .entry-content, .post-content, .content"
+    cleanup = """
+      () => {
+        const root = document.querySelector(%s) || document.body || document.documentElement;
+        const junk = root.querySelectorAll(
+          `script, style, noscript, template, svg, canvas, iframe, nav, header, footer, aside,
+           [aria-hidden="true"], [role="navigation"], [role="banner"], [role="contentinfo"],
+           .cookie, .cookies, .consent, .popup, .modal, .advert, .ads, .ad, .social-share`
+        );
+        junk.forEach((node) => node.remove());
+        return root.innerText || '';
+      }
+    """ % json.dumps(selector)
+    try:
+        text_content = page.evaluate(cleanup)
+    except Exception:
+        try:
+            text_content = page.locator('body').inner_text(timeout=20000)
+        except Exception:
+            try:
+                text_content = page.evaluate("() => document.documentElement.innerText")
+            except Exception:
+                text_content = ""
+
+    # Убираем пустые строки и повторяющиеся пробелы, сохраняя абзацы.
+    lines = [re.sub(r"[ \t]+", " ", line).strip() for line in (text_content or "").splitlines()]
+    text_content = re.sub(r"\n{3,}", "\n\n", "\n".join(line for line in lines if line))
+
+    frames = page.frames
+    if len(frames) > 1:
+        extra = []
+        for frame in frames[1:]:
+            try:
+                frame_text = frame.inner_text(timeout=8000)
+                if frame_text.strip():
+                    extra.append(f"\n[FRAME: {frame.url}]\n{frame_text}\n")
+            except Exception:
+                continue
+        if extra:
+            text_content += "\n--- СОДЕРЖИМОЕ ФРЕЙМОВ ---\n" + "\n".join(extra)
+    return text_content
+
+
+def extract_page_html(page):
+    """Возвращает HTML только содержательного контейнера для Markdown."""
+    try:
+        return page.evaluate("""
+            () => {
+              const selector = "article, main, [role='main'], .article, .post, .entry-content, .post-content, .content";
+              const root = document.querySelector(selector) || document.body || document.documentElement;
+              const copy = root.cloneNode(true);
+              copy.querySelectorAll(`script, style, noscript, template, svg, canvas, iframe, nav, header, footer, aside,
+                [aria-hidden="true"], [role="navigation"], [role="banner"], [role="contentinfo"],
+                .cookie, .cookies, .consent, .popup, .modal, .advert, .ads, .ad, .social-share`)
+                .forEach((node) => node.remove());
+              return copy.outerHTML;
+            }
+        """)
+    except Exception:
+        return page.content()
+
+
+def html_to_markdown(html_content, page_url=""):
+    """HTML -> Markdown. Сначала пробуем markdownify (чистый результат),
+    при сбое — собственный лёгкий конвертер на BeautifulSoup."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html_content, "html.parser")
+    for tag in soup([
+        "script", "style", "noscript", "template", "svg", "iframe",
+        "nav", "header", "footer", "aside",
+    ]):
+        tag.decompose()
+
+    try:
+        from markdownify import markdownify as md_convert
+        body = soup.body or soup
+        md = md_convert(str(body), heading_style="ATX", bullets="-")
+        md = re.sub(r'\n{3,}', '\n\n', md).strip()
+        if md:
+            return md
+    except Exception:
+        pass
+
+    # --- Фоллбэк-конвертер, если markdownify недоступен или дал пустоту ---
+    lines = []
+    for el in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "a"]):
+        if el.name and re.match(r'h[1-6]', el.name):
+            level = int(el.name[1])
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(f"{'#' * level} {txt}")
+        elif el.name == "li":
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(f"- {txt}")
+        elif el.name == "p":
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(txt)
+    text = "\n\n".join(lines) if lines else soup.get_text("\n", strip=True)
+    return text
+
+
+def fetch_via_requests(url, headers):
+    """Запасной метод получения контента, если Playwright не смог."""
+    import requests
+    resp = requests.get(url, headers=headers, timeout=20, allow_redirects=True)
+    resp.raise_for_status()
+    return resp.text, resp.status_code
+
+
+# ==============================================================================
+# ОСНОВНАЯ ЛОГИКА СКРАПИНГА (без UI — переиспользуется потоками)
+# ==============================================================================
+def scrape_one(url, fmt, out_dir, settings, log_cb):
+    """Скрапит один URL и сохраняет результат на диск.
+    Возвращает dict с результатами для манифеста."""
+    result = {
+        "url": url, "title": "", "status": "failed", "format": fmt,
+        "file": None, "size_bytes": 0, "word_count": None,
+        "blocked_suspected": False, "method": "playwright",
+        "attempts": 0, "error": None, "elapsed_sec": 0.0,
+    }
+    t0 = time.time()
+
+    ok_dns, dns_err = quick_dns_check(url)
+    if not ok_dns:
+        result["error"] = dns_err
+        result["elapsed_sec"] = round(time.time() - t0, 2)
+        log_cb(f"   ❌ {dns_err}")
+        return result
+
+    safe_name = sanitize(url)
+    file_path = os.path.join(out_dir, f"{safe_name}.{fmt}")
+    # На случай совпадения имён после санитизации
+    counter = 2
+    while os.path.exists(file_path):
+        file_path = os.path.join(out_dir, f"{safe_name}_{counter}.{fmt}")
+        counter += 1
+
+    max_attempts = max(1, settings["retries"] + 1)
+    last_error = None
+
+    for attempt in range(1, max_attempts + 1):
+        result["attempts"] = attempt
+        ua = random_ua()
+        locale, tz = random_locale_tz()
+        viewport = random.choice(VIEWPORTS)
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=[
+                        '--no-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--disable-gpu',
+                        '--disable-blink-features=AutomationControlled',
+                        '--lang=en-US,en;q=0.9',
+                    ],
+                )
+                context = browser.new_context(
+                    viewport=viewport,
+                    user_agent=ua,
+                    extra_http_headers=build_headers(ua),
+                    locale=locale,
+                    timezone_id=tz,
+                    device_scale_factor=1,
+                    permissions=["notifications"],
+                )
+                context.add_init_script(STEALTH_INIT_SCRIPT)
+                page = context.new_page()
+
+                response = page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                try:
+                    page.wait_for_load_state("networkidle", timeout=12000)
+                except Exception:
+                    pass  # сайты с вебсокетами/чатами никогда не "успокаиваются" — не страшно
+
+                page.wait_for_timeout(random.randint(400, 900))
+                autoscroll(page)
+
+                title = ""
+                try:
+                    title = page.title()
+                except Exception:
+                    pass
+                result["title"] = title
+
+                status_code = response.status if response else None
+                body_sample = ""
+                try:
+                    body_sample = page.locator('body').inner_text(timeout=5000)[:2000]
+                except Exception:
+                    pass
+                blocked = (status_code in (403, 429, 503)) or looks_blocked(title, body_sample)
+                result["blocked_suspected"] = blocked
+                if blocked:
+                    log_cb(f"   ⚠️ Похоже на блокировку (код {status_code}), попытка {attempt}/{max_attempts}")
+
+                # --- Сохранение по формату ---
+                if fmt == "pdf":
+                    page.pdf(
+                        path=file_path, format='A4', print_background=True,
+                        margin={'top': '0.5in', 'bottom': '0.5in', 'left': '0.5in', 'right': '0.5in'},
+                    )
+                    result["word_count"] = None
+                elif fmt == "html":
+                    content = page.content()
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(content)
+                elif fmt == "txt":
+                    text_content = extract_page_text(page)
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(text_content)
+                    result["word_count"] = len(text_content.split())
+                    result["_text"] = text_content
+                elif fmt == "md":
+                    content = extract_page_html(page)
+                    md_text = html_to_markdown(content, url)
+                    header = f"# {title or url}\n\nИсточник: {url}\n\n---\n\n"
+                    full_md = header + md_text
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(full_md)
+                    result["word_count"] = len(full_md.split())
+                    result["_text"] = full_md
+                elif fmt == "docx":
+                    from docx import Document
+                    text_content = extract_page_text(page)
+                    doc = Document()
+                    doc.add_heading(title or url, 0)
+                    doc.add_paragraph(f"Источник: {url}")
+                    doc.add_paragraph(f"Сохранено: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    doc.add_heading('Содержимое:', level=1)
+                    for para in text_content.split('\n'):
+                        if para.strip():
+                            doc.add_paragraph(para.strip())
+                    doc.save(file_path)
+                    result["word_count"] = len(text_content.split())
+                    result["_text"] = text_content
+
+                browser.close()
+
+                size = os.path.getsize(file_path)
+                result["status"] = "ok"
+                result["file"] = os.path.basename(file_path)
+                result["size_bytes"] = size
+                result["method"] = "playwright"
+                log_cb(f"   ✅ {fmt.upper()}: {human_size(size)} -> {os.path.basename(file_path)}")
+                last_error = None
+                break
+
+        except Exception as e:
+            last_error = str(e)
+            log_cb(f"   ⚠️ Попытка {attempt}/{max_attempts} не удалась: {last_error[:120]}")
+            if attempt < max_attempts:
+                time.sleep(random.uniform(2.0, 4.0))
+
+    if last_error and result["status"] != "ok" and fmt in ("html", "txt", "md", "docx"):
+        # --- Запасной метод: обычный requests + BeautifulSoup ---
+        try:
+            log_cb("   🔁 Пробую запасной метод (requests)...")
+            ua = random_ua()
+            raw_html, status_code = fetch_via_requests(url, build_headers(ua))
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(raw_html, "html.parser")
+            for tag in soup(["script", "style", "noscript", "template", "svg", "iframe",
+                             "nav", "header", "footer", "aside"]):
+                tag.decompose()
+            title = soup.title.get_text(strip=True) if soup.title else ""
+            result["title"] = title
+
+            if fmt == "html":
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(raw_html)
+            elif fmt == "txt":
+                text_content = soup.get_text("\n", strip=True)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(text_content)
+                result["word_count"] = len(text_content.split())
+                result["_text"] = text_content
+            elif fmt == "md":
+                md_text = html_to_markdown(raw_html, url)
+                full_md = f"# {title or url}\n\nИсточник: {url}\n\n---\n\n" + md_text
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(full_md)
+                result["word_count"] = len(full_md.split())
+                result["_text"] = full_md
+            elif fmt == "docx":
+                from docx import Document
+                text_content = soup.get_text("\n", strip=True)
+                doc = Document()
+                doc.add_heading(title or url, 0)
+                doc.add_paragraph(f"Источник: {url} (запасной метод)")
+                for para in text_content.split('\n'):
+                    if para.strip():
+                        doc.add_paragraph(para.strip())
+                doc.save(file_path)
+                result["word_count"] = len(text_content.split())
+                result["_text"] = text_content
+
+            size = os.path.getsize(file_path)
+            result["status"] = "ok"
+            result["file"] = os.path.basename(file_path)
+            result["size_bytes"] = size
+            result["method"] = "requests-fallback"
+            result["error"] = None
+            log_cb(f"   ✅ (запасной метод) {fmt.upper()}: {human_size(size)}")
+        except Exception as e2:
+            result["error"] = f"{last_error} | fallback: {e2}"
+            log_cb(f"   ❌ Запасной метод тоже не сработал: {str(e2)[:120]}")
+    elif last_error and result["status"] != "ok":
+        result["error"] = last_error
+
+    result["elapsed_sec"] = round(time.time() - t0, 2)
+    return result
+
+
+# ==============================================================================
+# ОБЪЕДИНЕНИЕ ФАЙЛОВ
+# ==============================================================================
+def merge_pdf(ok_results, out_dir, out_path, log_cb):
+    from pypdf import PdfWriter
+    writer = PdfWriter()
+    for r in ok_results:
+        fp = os.path.join(out_dir, r["file"])
+        if os.path.exists(fp):
+            writer.append(fp)
+    writer.add_metadata({"/Title": f"{APP_NAME} Merged Export", "/Producer": f"{APP_NAME} v{APP_VERSION}"})
+    with open(out_path, "wb") as f:
+        writer.write(f)
+    writer.close()
+
+
+def merge_text_like(ok_results, out_path, fmt):
+    sep = "\n\n" + ("=" * 70) + "\n\n"
+    chunks = []
+    for r in ok_results:
+        header = f"ИСТОЧНИК: {r['url']}\nЗАГОЛОВОК: {r['title']}\n"
+        body = r.get("_text", "")
+        chunks.append(header + "\n" + body)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(sep.join(chunks))
+
+
+def merge_markdown(ok_results, out_path):
+    toc = ["# Сводный документ\n", f"_Сгенерировано {APP_NAME} v{APP_VERSION}_\n", "\n## Содержание\n"]
+    body_parts = []
+    for r in ok_results:
+        anchor = slugify(r["title"] or r["url"])
+        toc.append(f"- [{r['title'] or r['url']}](#{anchor})")
+        text = r.get("_text", "")
+        # убираем дублирующийся заголовок верхнего уровня внутри текста источника
+        text = re.sub(r'^#\s.*\n+', '', text, count=1)
+        body_parts.append(f"\n\n<a name=\"{anchor}\"></a>\n\n## {r['title'] or r['url']}\n\nИсточник: {r['url']}\n\n---\n\n{text}")
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(toc) + "\n" + "".join(body_parts))
+
+
+def merge_html(ok_results, out_dir, out_path):
+    nav_items = []
+    sections = []
+    for r in ok_results:
+        anchor = slugify(r["title"] or r["url"])
+        nav_items.append(f'<li><a href="#{anchor}">{r["title"] or r["url"]}</a></li>')
+        fp = os.path.join(out_dir, r["file"])
+        try:
+            with open(fp, "r", encoding="utf-8", errors="ignore") as f:
+                raw = f.read()
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(raw, "html.parser")
+            inner = str(soup.body) if soup.body else raw
+        except Exception:
+            inner = "<p>(не удалось прочитать)</p>"
+        sections.append(
+            f'<section id="{anchor}"><h1>{r["title"] or r["url"]}</h1>'
+            f'<p class="src">Источник: <a href="{r["url"]}">{r["url"]}</a></p>{inner}</section><hr/>'
+        )
+    html_doc = f"""<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>{APP_NAME} — Сводный экспорт</title>
+<style>
+body{{font-family:Segoe UI,Arial,sans-serif;background:#0d0d12;color:#e4e4e4;max-width:980px;margin:0 auto;padding:30px;}}
+nav{{background:#1a1a2e;padding:15px 20px;border-radius:8px;margin-bottom:30px;}}
+nav a{{color:#00ff88;text-decoration:none;}}
+nav a:hover{{text-decoration:underline;}}
+section{{margin-bottom:40px;}}
+.src{{color:#888;font-size:0.9em;}}
+hr{{border-color:#333;}}
+h1{{color:#00ff88;}}
+</style></head><body>
+<h1>📚 {APP_NAME} — Сводный экспорт ({len(ok_results)} источников)</h1>
+<nav><ul>{''.join(nav_items)}</ul></nav>
+{''.join(sections)}
+</body></html>"""
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(html_doc)
+
+
+def merge_docx(ok_results, out_path):
+    from docx import Document
+    doc = Document()
+    doc.add_heading(f'{APP_NAME} — Сводный экспорт', 0)
+    doc.add_paragraph(f"Источников: {len(ok_results)} | Сгенерировано: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    for i, r in enumerate(ok_results):
+        if i > 0:
+            doc.add_page_break()
+        doc.add_heading(r["title"] or r["url"], level=1)
+        doc.add_paragraph(f"Источник: {r['url']}")
+        text = r.get("_text", "")
+        for para in text.split('\n'):
+            if para.strip():
+                doc.add_paragraph(para.strip())
+    doc.save(out_path)
+
+
+def write_manifest_and_index(manifest, out_dir, merged_filename=None):
+    manifest_path = os.path.join(out_dir, "manifest.json")
+    clean = [{k: v for k, v in r.items() if not k.startswith("_")} for r in manifest]
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "app": APP_NAME, "version": APP_VERSION,
+                "generated": datetime.now().isoformat(timespec="seconds"),
+                "merged_file": merged_filename,
+                "sources": clean,
+            },
+            f, ensure_ascii=False, indent=2,
+        )
+
+    lines = [
+        f"# {APP_NAME} v{APP_VERSION} — отчёт о сборе\n",
+        f"Сгенерировано: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  ",
+        f"Всего источников: {len(clean)}\n",
+    ]
+    if merged_filename:
+        lines.append(f"**Объединённый файл:** [{merged_filename}](./{merged_filename})\n")
+    lines.append("| # | Заголовок | URL | Статус | Файл | Размер | Слов | Метод |")
+    lines.append("|---|---|---|---|---|---|---|---|")
+    for i, r in enumerate(clean, 1):
+        status_icon = "✅" if r["status"] == "ok" else "❌"
+        blocked = " ⚠️блок" if r.get("blocked_suspected") else ""
+        title = (r["title"] or "—").replace("|", "/")[:60]
+        file_link = f"[{r['file']}](./{r['file']})" if r["file"] else "—"
+        size = human_size(r["size_bytes"]) if r["size_bytes"] else "—"
+        words = r["word_count"] if r["word_count"] else "—"
+        lines.append(
+            f"| {i} | {title} | {r['url']} | {status_icon}{blocked} | {file_link} | {size} | {words} | {r['method']} |"
+        )
+        if r["status"] != "ok" and r.get("error"):
+            lines.append(f"|   | _ошибка:_ {str(r['error'])[:150]} |||||||")
+
+    with open(os.path.join(out_dir, "INDEX.md"), "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+
+# ==============================================================================
+# GUI
+# ==============================================================================
+class App:
+    def __init__(self, root):
+        self.root = root
+        self.ui_q = queue.Queue()
+        self.stop_event = threading.Event()
+        self.lock = threading.Lock()
+        self.is_running = False
+        self.last_output_dir = None
+
+        root.title(f"🚀 {APP_NAME} v{APP_VERSION}")
+        root.configure(bg="#12121f")
+        root.geometry("800x860")
+        root.minsize(760, 700)
+        root.resizable(False, True)
+        root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+        style = ttk.Style(root)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+        style.configure("TProgressbar", troughcolor="#1e1e1e", background="#00aa44", thickness=14)
+        style.configure("TCombobox", fieldbackground="#1e1e1e", background="#1e1e1e", foreground="white")
+
+        # --- Заголовок ---
+        header = tk.Frame(root, bg="#1a1a2e")
+        header.pack(fill="x")
+        tk.Label(header, text=f"🚀 {APP_NAME} v{APP_VERSION}", font=("Segoe UI", 16, "bold"),
+                 bg="#1a1a2e", fg="#00ff88", pady=8).pack()
+        tk.Label(header, text="Любой сайт • Любой формат • Без ключей • Параллельно",
+                 font=("Segoe UI", 10), bg="#1a1a2e", fg="#888888").pack(pady=(0, 8))
+
+        # --- URL ---
+        tk.Label(root, text="📋 URL (по одному в строке):", font=("Segoe UI", 10, "bold"),
+                 anchor="w", bg="#12121f", fg="white").pack(fill="x", padx=20, pady=(12, 4))
+        self.urls = tk.Text(root, height=7, font=("Consolas", 10), bg="#1e1e1e", fg="#00ff88",
+                             insertbackground="#00ff88", wrap="none")
+        self.urls.pack(fill="both", expand=False, padx=20, pady=2)
+
+        # --- Настройки ---
+        frame = tk.LabelFrame(root, text="⚙️ Настройки", font=("Segoe UI", 10, "bold"),
+                               padx=10, pady=8, bg="#2d2d44", fg="white")
+        frame.pack(fill="x", padx=20, pady=10)
+
+        tk.Label(frame, text="Формат:", bg="#2d2d44", fg="white").grid(row=0, column=0, sticky="w", padx=5, pady=3)
+        self.fmt_label = tk.StringVar(value="PDF")
+        ttk.Combobox(frame, textvariable=self.fmt_label, values=list(FORMAT_MAP.keys()),
+                     state="readonly", width=10).grid(row=0, column=1, sticky="w", padx=5, pady=3)
+
+        self.merge = tk.BooleanVar(value=True)
+        tk.Checkbutton(frame, text="Объединить в один файл", variable=self.merge,
+                       bg="#2d2d44", fg="white", selectcolor="#2d2d44").grid(row=0, column=2, columnspan=2, padx=10, pady=3, sticky="w")
+
+        self.aggr = tk.BooleanVar(value=True)
+        tk.Checkbutton(frame, text="🔥 Агрессивный режим (короче паузы)",
+                       variable=self.aggr, bg="#2d2d44", fg="#00ff88",
+                       selectcolor="#2d2d44", font=("Segoe UI", 9, "bold")).grid(row=1, column=0, columnspan=4, pady=(8, 3), sticky="w")
+
+        tk.Label(frame, text="Потоков параллельно:", bg="#2d2d44", fg="white").grid(row=2, column=0, sticky="w", padx=5, pady=3)
+        self.concurrency = tk.IntVar(value=1)
+        tk.Spinbox(frame, from_=1, to=5, textvariable=self.concurrency, width=5,
+                   bg="#1e1e1e", fg="#00ff88", buttonbackground="#1e1e1e").grid(row=2, column=1, sticky="w", padx=5, pady=3)
+
+        tk.Label(frame, text="Повторов при ошибке:", bg="#2d2d44", fg="white").grid(row=2, column=2, sticky="w", padx=5, pady=3)
+        self.retries = tk.IntVar(value=1)
+        tk.Spinbox(frame, from_=0, to=3, textvariable=self.retries, width=5,
+                   bg="#1e1e1e", fg="#00ff88", buttonbackground="#1e1e1e").grid(row=2, column=3, sticky="w", padx=5, pady=3)
+
+        tk.Label(frame, text="⚠️ Больше потоков = быстрее, но выше риск блокировки на одном домене",
+                 bg="#2d2d44", fg="#999999", font=("Segoe UI", 8)).grid(row=3, column=0, columnspan=4, sticky="w", padx=5, pady=(4, 0))
+
+        # --- Кнопки ---
+        btn_row = tk.Frame(root, bg="#12121f")
+        btn_row.pack(fill="x", padx=20, pady=8)
+        self.btn = tk.Button(btn_row, text="🚀 НАЧАТЬ", command=self.start,
+                             bg="#00aa44", fg="white", font=("Segoe UI", 12, "bold"))
+        self.btn.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        self.stop_btn = tk.Button(btn_row, text="⛔ СТОП", command=self.stop, state="disabled",
+                                   bg="#aa2222", fg="white", font=("Segoe UI", 12, "bold"))
+        self.stop_btn.pack(side="left", fill="x", expand=True, padx=(5, 0))
+
+        # --- Прогресс ---
+        self.progress = tk.DoubleVar()
+        ttk.Progressbar(root, variable=self.progress, maximum=100, style="TProgressbar").pack(fill="x", padx=20, pady=5)
+
+        # --- Лог ---
+        log_frame = tk.LabelFrame(root, text="📋 Журнал", font=("Segoe UI", 9, "bold"),
+                                  padx=5, pady=5, bg="#1e1e1e", fg="#00ff88")
+        log_frame.pack(fill="both", expand=True, padx=20, pady=5)
+        self.log_text = tk.Text(log_frame, height=12, state="disabled",
+                                bg="#0d0d0d", fg="#00ff88", font=("Consolas", 9))
+        sb = ttk.Scrollbar(log_frame, orient="vertical", command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=sb.set)
+        self.log_text.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+
+        # --- Статистика + папка ---
+        stats = tk.Frame(root, bg="#12121f")
+        stats.pack(fill="x", padx=20, pady=(2, 12))
+        self.ok_label = tk.Label(stats, text="✅ 0", font=("Segoe UI", 10, "bold"), fg="#00ff88", bg="#12121f")
+        self.ok_label.pack(side="left", padx=(0, 20))
+        self.fail_label = tk.Label(stats, text="❌ 0", font=("Segoe UI", 10, "bold"), fg="#ff4444", bg="#12121f")
+        self.fail_label.pack(side="left", padx=20)
+        self.folder_btn = tk.Button(stats, text="📂 Открыть папку результата", command=self.open_output_folder,
+                                     state="disabled", bg="#2d2d44", fg="white", font=("Segoe UI", 9))
+        self.folder_btn.pack(side="right")
+
+        self.root.after(80, self._poll_ui)
+
+    # ---------------- UI helpers (потокобезопасные) ----------------
+    def log(self, msg):
+        self.ui_q.put(("log", msg))
+
+    def set_progress(self, pct):
+        self.ui_q.put(("progress", pct))
+
+    def set_stats(self, ok, fail):
+        self.ui_q.put(("stats", (ok, fail)))
+
+    def _poll_ui(self):
+        try:
+            while True:
+                kind, payload = self.ui_q.get_nowait()
+                if kind == "log":
+                    self.log_text.config(state="normal")
+                    self.log_text.insert(tk.END, payload + "\n")
+                    self.log_text.see(tk.END)
+                    self.log_text.config(state="disabled")
+                elif kind == "progress":
+                    self.progress.set(payload)
+                elif kind == "stats":
+                    ok, fail = payload
+                    self.ok_label.config(text=f"✅ {ok}")
+                    self.fail_label.config(text=f"❌ {fail}")
+                elif kind == "done":
+                    self._on_finished(payload)
+        except queue.Empty:
+            pass
+        try:
+            self.root.after(80, self._poll_ui)
+        except tk.TclError:
+            pass
+
+    # ---------------- Запуск / остановка ----------------
+    def start(self):
+        if self.is_running:
+            return
+        raw_urls = self.urls.get("1.0", tk.END).strip()
+        if not raw_urls:
+            messagebox.showwarning("Ошибка", "Введите хотя бы один URL!")
+            return
+
+        seen = set()
+        valid_urls = []
+        for u in (x.strip() for x in raw_urls.splitlines()):
+            if not u:
+                continue
+            if not u.startswith(("http://", "https://")):
+                self.log(f"⚠️ Невалидный URL пропущен: {u}")
+                continue
+            if u in seen:
+                continue
+            seen.add(u)
+            valid_urls.append(u)
+
+        if not valid_urls:
+            messagebox.showwarning("Ошибка", "Ни одного валидного URL не найдено!")
+            return
+
+        out_dir = os.path.join(BASE_DIR, f"MEGA_TANK_{now_stamp()}")
+        os.makedirs(out_dir, exist_ok=True)
+        self.last_output_dir = out_dir
+
+        settings = {
+            "fmt": FORMAT_MAP[self.fmt_label.get()],
+            "merge": self.merge.get(),
+            "aggressive": self.aggr.get(),
+            "concurrency": max(1, min(5, self.concurrency.get())),
+            "retries": max(0, min(3, self.retries.get())),
+        }
+
+        self.stop_event.clear()
+        self.is_running = True
+        self.btn.config(state="disabled", text="⏳ РАБОТАЮ...")
+        self.stop_btn.config(state="normal")
+        self.folder_btn.config(state="disabled")
+        self.log_text.config(state="normal")
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.config(state="disabled")
+        self.set_progress(0)
+        self.set_stats(0, 0)
+
+        threading.Thread(target=self._coordinator, args=(valid_urls, out_dir, settings), daemon=True).start()
+
+    def stop(self):
+        self.stop_event.set()
+        self.stop_btn.config(state="disabled", text="⛔ ОСТАНАВЛИВАЮ...")
+        self.log("\n⛔ Остановка запрошена пользователем — потоки завершают текущие задачи...")
+
+    def on_close(self):
+        if self.is_running:
+            if not messagebox.askyesno("Подтверждение", "Скрапинг ещё идёт. Закрыть всё равно?"):
+                return
+            self.stop_event.set()
+        self.root.destroy()
+
+    def open_output_folder(self):
+        if not self.last_output_dir or not os.path.isdir(self.last_output_dir):
+            return
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(self.last_output_dir)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", self.last_output_dir])
+            else:
+                subprocess.Popen(["xdg-open", self.last_output_dir])
+        except Exception:
+            webbrowser.open(f"file://{self.last_output_dir}")
+
+    # ---------------- Координатор + воркеры ----------------
+    def _coordinator(self, urls, out_dir, settings):
+        url_q = queue.Queue()
+        for u in urls:
+            url_q.put(u)
+
+        manifest = []
+        counters = {"ok": 0, "fail": 0, "done": 0}
+        total = len(urls)
+
+        self.log("=" * 60)
+        self.log(f"🚀 {APP_NAME} v{APP_VERSION}")
+        self.log(f"📁 Папка результата: {out_dir}")
+        self.log(f"📄 Формат: {settings['fmt'].upper()} | Объединить: {'ДА' if settings['merge'] else 'НЕТ'}")
+        self.log(f"🌐 URLs: {total} | Потоков: {settings['concurrency']} | Повторов: {settings['retries']}")
+        self.log("=" * 60)
+
+        def worker(worker_id):
+            while not self.stop_event.is_set():
+                try:
+                    url = url_q.get_nowait()
+                except queue.Empty:
+                    break
+                self.log(f"\n[поток {worker_id}] 📥 {url[:75]}")
+                res = scrape_one(url, settings["fmt"], out_dir, settings, self.log)
+                with self.lock:
+                    manifest.append(res)
+                    if res["status"] == "ok":
+                        counters["ok"] += 1
+                    else:
+                        counters["fail"] += 1
+                        self.log(f"   ❌ Не удалось: {url} — {str(res.get('error'))[:150]}")
+                    counters["done"] += 1
+                    self.set_stats(counters["ok"], counters["fail"])
+                    self.set_progress(counters["done"] / total * 100)
+
+                if self.stop_event.is_set():
+                    break
+                delay = random.uniform(8.0, 15.0) if settings["aggressive"] else random.uniform(3.0, 7.0)
+                self.log(f"   ⏱️ [поток {worker_id}] пауза {delay:.1f} сек")
+                slept = 0.0
+                while slept < delay and not self.stop_event.is_set():
+                    time.sleep(0.25)
+                    slept += 0.25
+
+        threads = [threading.Thread(target=worker, args=(i + 1,), daemon=True)
+                   for i in range(settings["concurrency"])]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # сортируем манифест в исходном порядке URL для предсказуемости
+        order = {u: i for i, u in enumerate(urls)}
+        manifest.sort(key=lambda r: order.get(r["url"], 999999))
+
+        ok_results = [r for r in manifest if r["status"] == "ok"]
+        merged_filename = None
+
+        if settings["merge"] and ok_results and not self.stop_event.is_set():
+            self.log("\n" + "=" * 60)
+            self.log("🔗 ОБЪЕДИНЕНИЕ ФАЙЛОВ...")
+            self.log("=" * 60)
+            fmt = settings["fmt"]
+            merged_name = f"MEGA_FULL.{fmt}"
+            merged_path = os.path.join(out_dir, merged_name)
+            try:
+                if fmt == "pdf":
+                    merge_pdf(ok_results, out_dir, merged_path, self.log)
+                elif fmt in ("txt",):
+                    merge_text_like(ok_results, merged_path, fmt)
+                elif fmt == "md":
+                    merge_markdown(ok_results, merged_path)
+                elif fmt == "html":
+                    merge_html(ok_results, out_dir, merged_path)
+                elif fmt == "docx":
+                    merge_docx(ok_results, merged_path)
+                size = os.path.getsize(merged_path)
+                self.log(f"   ✅ Объединённый файл: {human_size(size)} -> {merged_name}")
+                merged_filename = merged_name
+            except Exception as e:
+                self.log(f"   ❌ Ошибка объединения: {e}")
+
+        try:
+            write_manifest_and_index(manifest, out_dir, merged_filename)
+            self.log("\n📊 manifest.json и INDEX.md записаны")
+        except Exception as e:
+            self.log(f"⚠️ Не удалось записать manifest/index: {e}")
+
+        self.log("\n" + "=" * 60)
+        status_word = "ОСТАНОВЛЕНО" if self.stop_event.is_set() else "ГОТОВО"
+        self.log(f"🎉 {status_word}! Успешно: {counters['ok']} | Ошибок: {counters['fail']}")
+        self.log(f"📁 Папка: {out_dir}")
+        self.log("=" * 60)
+
+        self.set_progress(100)
+        self.ui_q.put(("done", {
+            "ok": counters["ok"], "fail": counters["fail"],
+            "out_dir": out_dir, "stopped": self.stop_event.is_set(),
+        }))
+
+    def _on_finished(self, payload):
+        self.is_running = False
+        self.btn.config(state="normal", text="🚀 НАЧАТЬ")
+        self.stop_btn.config(state="disabled", text="⛔ СТОП")
+        self.folder_btn.config(state="normal")
+        title = "Остановлено" if payload["stopped"] else "Готово"
+        messagebox.showinfo(
+            title,
+            f"✅ Успешно: {payload['ok']}\n❌ Ошибок: {payload['fail']}\n📁 Папка:\n{payload['out_dir']}",
+        )
+
+
+# ==============================================================================
+# ЗАПУСК
+# ==============================================================================
+if __name__ == "__main__":
+    installer = AutoInstaller()
+    deps_ok = installer.run()
+
+    if not deps_ok:
+        print("\n⚠️ Не все зависимости установлены — приложение может работать нестабильно.")
+        try:
+            answer = input("Запустить всё равно? (y/n): ").strip().lower()
+        except EOFError:
+            answer = "n"
+        if answer != "y":
+            input("\nНажмите Enter для выхода...")
+            sys.exit(1)
+
+    root = tk.Tk()
+    app = App(root)
+    root.mainloop()
