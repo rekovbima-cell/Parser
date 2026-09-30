@@ -808,4 +808,414 @@ function htmlToMarkdown(root, base){
         });
       } else if(t === "pre"){
         const code = ch.textContent.replace(/\n+$/,"");
-        if(code.trim()) out.push("
+        if(code.trim()) out.push("```" + code + "```");
+      } else if(t === "table"){
+        const md = tableToMd(ch); if(md) out.push(md);
+      } else if(t === "blockquote"){
+        const v = htmlToMarkdown(ch, base).trim();
+        if(v) out.push(v.split("\n").map(l => "> " + l).join("\n"));
+      } else if(t === "hr"){
+        out.push("---");
+      } else if(BLOCK_TAGS.has(ch.tagName)){
+        const v = htmlToMarkdown(ch, base).trim(); if(v) out.push(v);
+      } else {
+        const v = inlineMd(ch, base).trim(); if(v) out.push(v);
+      }
+    });
+  };
+  walk(root);
+  return out.join("\n");
+}
+
+/* ======================= ВОССТАНОВЛЕННАЯ ЧАСТЬ (репо-копия была обрезана) ======================= */
+
+const MIME = { html:"text/html;charset=utf-8", txt:"text/plain;charset=utf-8", md:"text/markdown;charset=utf-8", doc:"application/msword", pdf:"application/pdf" };
+const RENDER_SERVER = { id:"render-server", label:"render-server", build:u => "http://127.0.0.1:8765/render?url=" + encodeURIComponent(u), json:false, local:true };
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=ri(0,i); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function normalizeUrl(u){ u=String(u||"").trim(); if(/^https?:\/\//i.test(u)) return u; if(u.startsWith("//")) return "https:"+u; return "https://"+u; }
+function fmtExt(k){ return FORMAT_MAP[k] || k; }
+function setPhase(t){ $("#phaseBadge").textContent = t; }
+function setStatus(t){ $("#statusTxt").textContent = t; }
+
+function rotateStealth(){
+  const ua = pick(UA_SHORT), pair = pick(LOCALE_TZ_PAIRS), vp = pick(VIEWPORTS), node = pick(FETCH_NODES);
+  $("#spUa .v").textContent = ua;
+  $("#spLoc .v").textContent = pair[0] + " · " + pair[1];
+  $("#spVp .v").textContent = vp;
+  $("#spProxy .v").textContent = node.label;
+}
+
+/* ============================== fetch-пайплайн ============================== */
+function nodeFetch(node, url, timeoutMs){
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs || 30000);
+  return fetch(node.build(url), { signal: ctrl.signal, redirect: "follow" }).then(r => r.text().then(body => {
+    clearTimeout(timer);
+    if(node.json){
+      let data; try{ data = JSON.parse(body); }catch(e){ throw new Error("bad json"); }
+      const content = data ? data[node.contentKey] : null;
+      if(typeof content !== "string" || !content.trim()) throw new Error("пустой ответ");
+      return content;
+    }
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    if(!body || body.length < 200) throw new Error("пустой ответ");
+    return body;
+  }), e => { clearTimeout(timer); throw e; });
+}
+
+async function fetchPage(url){
+  // 1) локальный render-server (PREVIEW_SERVER.py — полноценный JS-рендеринг), 2) публичные CORS-прокси
+  const nodes = [RENDER_SERVER].concat(shuffle(FETCH_NODES.slice()));
+  const errors = [];
+  for(const node of nodes){
+    try{
+      log("fetch → " + node.label, "step");
+      const html = await nodeFetch(node, url, node.local ? 6000 : 30000);
+      return { ok:true, html:html, via:node.label };
+    }catch(e){
+      errors.push(node.label + ": " + String(e && e.message || e).slice(0, 90));
+    }
+  }
+  return { ok:false, errors:errors };
+}
+
+function parsePage(html){
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const title = (doc.title || "").trim();
+  const main = pickMain(cleanDom(doc));
+  const sample = (main && main.textContent || "").slice(0, 2000);
+  return { doc:doc, title:title, main:main, sample:sample };
+}
+
+function buildContent(url, page){
+  const fmt = state.fmt, ext = fmtExt(fmt), main = page.main, title = page.title || url;
+  if(fmt === "txt") return { title:title, ext:ext, text:extractText(main) };
+  if(fmt === "md" || fmt === "pdf") return { title:title, ext:ext, text:"# " + title + "\n\n**Source:** " + url + "\n\n---\n\n" + htmlToMarkdown(main, url) };
+  if(fmt === "html") return { title:title, ext:ext, text:"<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\"><title>" + escapeHtml(title) + "</title></head><body>\n<!-- MEGA TANK · " + escapeHtml(url) + " -->\n" + main.innerHTML + "\n</body></html>" };
+  if(fmt === "doc") return { title:title, ext:ext, text:docHtml(title, url, main.innerHTML) };
+  return { title:title, ext:ext, text:extractText(main) };
+}
+
+function docHtml(title, url, bodyHtml){
+  return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title></head><body><h1>' + escapeHtml(title) + '</h1><p><b>Source:</b> <a href="' + escapeHtml(url) + '">' + escapeHtml(url) + '</a></p>' + bodyHtml + '</body></html>';
+}
+
+function demoContent(url){
+  const ext = fmtExt(state.fmt);
+  const title = "DEMO · " + url;
+  const paras = ["Сеть недоступна или все fetch-узлы вернули ошибку — строка сгенерирована в демо-режиме, чтобы проверить пайплайн: очередь, параллельные воркеры, таблицу результатов и экспорт (ZIP / manifest / INDEX).", "Демо-режим включается переключателем «Демо-режим» и срабатывает только когда реальный запрос не удался.", "Для полноценного JS-рендеринга запустите PREVIEW_SERVER.py — тогда предпросмотр работает без публичных прокси."];
+  const body = "## Демо-контент\n\n" + paras.map((p,i) => "- Пункт " + (i+1) + ": " + p).join("\n");
+  const text = (state.fmt === "html" || state.fmt === "doc")
+    ? "<h1>" + escapeHtml(title) + "</h1><p><b>Source:</b> " + escapeHtml(url) + "</p><p>" + paras.map(escapeHtml).join("</p><p>") + "</p>"
+    : "# " + title + "\n\n**Source:** " + url + "\n\n" + body;
+  return { title:title, ext:ext, text:text };
+}
+
+/* ============================== состояние ============================== */
+const state = { running:false, stopReq:false, idx:0, urls:[], stamp:"", fmt:"md", ret:1, aggrOn:false, fallbackOn:true, results:[], t0:0, ok:0, fail:0, block:0, size:0, words:0, active:0, timer:null };
+
+function updStats(){
+  $("#sOk").textContent = String(state.ok);
+  $("#sFail").textContent = String(state.fail);
+  $("#sBlock").textContent = String(state.block);
+  $("#sSize").textContent = humanSize(state.size);
+  $("#sWords").textContent = String(state.words);
+  const done = state.ok + state.fail + state.block, total = state.urls.length || 0;
+  $("#mDone").textContent = String(done);
+  $("#mTotal").textContent = String(total);
+  $("#mThr").textContent = String(state.active);
+  const pct = total ? Math.round(done * 100 / total) : 0;
+  $("#pct").textContent = String(pct);
+  $("#barFill").style.width = pct + "%";
+  const elapsed = (performance.now() - state.t0) / 1000;
+  $("#mElapsed").textContent = elapsed.toFixed(1) + "s";
+  $("#mEta").textContent = (done && done < total) ? ((elapsed / done) * (total - done)).toFixed(0) + "s" : "—";
+  $("#resCount").textContent = state.results.length + " файлов";
+}
+
+function record(url, info){
+  // info: { status:"ok"|"fail"|"block", title, text, via, demo }
+  const n = state.results.length + 1;
+  let name = "—", size = 0, words = 0, mime = MIME[state.fmt] || "text/plain";
+  if(info.status === "ok" && info.text){
+    name = sanitize(url) + "." + info.ext;
+    words = String(info.text).split(/\s+/).filter(Boolean).length;
+    if(state.fmt === "pdf"){
+      const blob = makePdfBlob(info.title || url, url, info.text);
+      if(blob){ info.blob = blob; size = blob.size; }
+      else { name = sanitize(url) + ".txt"; info.pdfFallback = true; }
+    }
+    if(!size) size = blobSize(info.text);
+    state.size += size; state.words += words;
+    state.results.push({ url:url, n:n, title:info.title || url, name:name, text:info.blob ? "" : info.text, blob:info.blob || null, via:info.via || (info.demo ? "demo" : "?"), status:info.status, words:words, size:size });
+  } else {
+    state.results.push({ url:url, n:n, title:info.title || url, name:name, text:"", blob:null, via:info.via || "", status:info.status, words:0, size:0 });
+  }
+  if(info.status === "ok") state.ok++; else if(info.status === "block") state.block++; else state.fail++;
+  addRow(state.results[state.results.length - 1]);
+  updStats();
+}
+
+function addRow(r){
+  const tr = document.createElement("tr");
+  const st = r.status === "ok" ? '<b class="st-ok">ok' + (r.via === "demo" ? " · demo" : "") + '</b>' : (r.status === "block" ? '<b class="st-block">блок</b>' : '<b class="st-fail">ошибка</b>');
+  const via = r.via ? escapeHtml(r.via) : "—";
+  tr.innerHTML = "<td>" + r.n + "</td>"
+    + "<td><b>" + escapeHtml((r.title || r.url).slice(0, 90)) + "</b><br><span style=\"opacity:.55;font-size:11px;word-break:break-all\">" + escapeHtml(r.url.slice(0, 110)) + "</span></td>"
+    + "<td>" + st + "</td>"
+    + "<td style=\"word-break:break-all\">" + escapeHtml(r.name) + (r.blob ? " 📄" : "") + "</td>"
+    + "<td>" + humanSize(r.size) + "</td>"
+    + "<td>" + (r.words || "—") + "</td>"
+    + "<td style=\"font-size:11px\">" + via + "</td>"
+    + "<td></td>";
+  const act = tr.lastChild;
+  if(r.text || r.blob){
+    const mkBtn = (label, fn) => { const b = document.createElement("button"); b.className = "btn btn-ghost"; b.style.cssText = "padding:3px 8px;font-size:11px"; b.textContent = label; b.onclick = fn; return b; };
+    act.appendChild(mkBtn("👁", () => {
+      const blob = r.blob || new Blob([r.text], { type: MIME[state.fmt] || "text/plain" });
+      window.open(URL.createObjectURL(blob), "_blank");
+    }));
+    act.appendChild(mkBtn("⧉", () => navigator.clipboard && navigator.clipboard.writeText(r.text).then(() => toast("Скопировано", r.name))));
+    act.appendChild(mkBtn("⬇", () => downloadFile(r)));
+  }
+  $("#tbody").appendChild(tr);
+}
+
+function downloadFile(r){
+  download(r.name, r.blob || r.text, MIME[state.fmt]);
+}
+
+function download(name, content, mime){
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mime || "application/octet-stream" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+
+function makePdfBlob(title, url, text){
+  try{
+    const J = window.jspdf && window.jspdf.jsPDF;
+    if(!J){ toast("PDF недоступен", "нет jsPDF (CDN?) — сохранён как TXT", "warn"); return null; }
+    const pdf = new J({ unit: "pt", format: "a4" });
+    const W = pdf.internal.pageSize.getWidth() - 72, H = pdf.internal.pageSize.getHeight();
+    pdf.setFontSize(15); pdf.text(String(title).slice(0, 78), 36, 46);
+    pdf.setFontSize(8); pdf.text(String(url).slice(0, 120), 36, 60);
+    pdf.setFontSize(10);
+    let y = 82;
+    String(text).split("\n").forEach(line => {
+      const wrapped = pdf.splitTextToSize(String(line).replace(/\t/g, "    "), W);
+      wrapped.forEach(w => { if(y > H - 42){ pdf.addPage(); y = 56; } pdf.text(w, 36, y); y += 14; });
+    });
+    return pdf.output("blob");
+  }catch(e){ toast("Ошибка PDF", String(e).slice(0, 100), "err"); return null; }
+}
+
+/* ============================== обработка одного URL ============================== */
+async function processUrl(url){
+  const attempts = Math.max(1, 1 + state.ret);
+  for(let a = 1; a <= attempts; a++){
+    if(state.stopReq) return;
+    rotateStealth();
+    let res;
+    try{ res = await fetchPage(url); }catch(e){ res = { ok:false, errors:[String(e).slice(0,90)] }; }
+    if(res.ok){
+      const page = parsePage(res.html);
+      if(looksBlocked(page.title, page.sample)){
+        log("блок/капча → " + url, "vio");
+        if(a < attempts){ await sleep(500); continue; }
+        return record(url, { status:"block", title:page.title, via:res.via });
+      }
+      const c = buildContent(url, page);
+      log("ok · " + c.title.slice(0, 60) + " · via " + res.via, "ok");
+      return record(url, { status:"ok", title:c.title, text:c.text, ext:c.ext, via:res.via });
+    }
+    log("попытка " + a + "/" + attempts + " не удалась (" + (res.errors && res.errors[0] || "?") + ")", "warn");
+    if(a < attempts) await sleep(state.aggrOn ? 250 : 900);
+  }
+  if($("#demo").checked){
+    const d = demoContent(url);
+    log("демо-контент для " + url, "mut");
+    return record(url, { status:"ok", title:d.title, text:d.text, ext:d.ext, via:"demo", demo:true });
+  }
+  record(url, { status:"fail", title:url });
+}
+
+/* ============================== запуск ============================== */
+async function run(){
+  const urls = readUrls();
+  if(!urls.length){ toast("Нет ссылок", "добавьте URL или нажмите «пример»", "warn"); return; }
+  Object.assign(state, { running:true, stopReq:false, idx:0, urls:urls, results:[], ok:0, fail:0, block:0, size:0, words:0, active:0, stamp:nowStamp() });
+  state.fmt = FORMAT_MAP[$("#fmt").value] ? $("#fmt").value : "md";
+  state.ret = +$("#ret").value;
+  state.aggrOn = $("#aggr").checked;
+  state.fallbackOn = $("#fallback").checked;
+  $("#stampLbl").textContent = state.stamp;
+  $("#btnStart").disabled = true; $("#btnStop").disabled = false;
+  $("#tbody").innerHTML = ""; $("#tbl").style.display = ""; $("#emptyState").style.display = "none";
+  ["#btnZip","#btnMerged","#btnManifest","#btnIndex"].forEach(s => $(s).disabled = true);
+  setPhase("running"); setStatus("работаю · " + urls.length + " URL");
+  state.t0 = performance.now();
+  state.timer = setInterval(updStats, 500);
+  rule("=", "head");
+  log("MEGA TANK · старт · папка результата MEGA_TANK_" + state.stamp, "head");
+  log("формат " + FORMAT_LABEL[state.fmt] + " · поток " + $("#conc").value + " · ретраи " + state.ret + " · fallback " + (state.fallbackOn ? "вкл" : "выкл"), "info");
+
+  const conc = Math.max(1, +$("#conc").value);
+  const worker = async () => {
+    state.active++;
+    while(!state.stopReq){
+      const i = state.idx++;
+      if(i >= state.urls.length) break;
+      try{ await processUrl(state.urls[i]); }catch(e){ log("воркер: " + String(e).slice(0,90), "err"); record(state.urls[i], { status:"fail", title:state.urls[i] }); }
+    }
+    state.active--;
+  };
+  await Promise.all(Array.from({ length: conc }, worker));
+
+  clearInterval(state.timer);
+  state.running = false;
+  $("#btnStart").disabled = false; $("#btnStop").disabled = true;
+  setPhase(state.stopReq ? "stopped" : "done");
+  setStatus(state.stopReq ? "остановлено" : "готово");
+  const done = state.ok + state.fail + state.block;
+  log("итог: " + state.ok + " ok · " + state.fail + " ошибок · " + state.block + " блоков", "head");
+  toast("Пакет завершён", state.ok + " из " + done + " URL успешно");
+  if(state.results.some(r => r.text || r.blob)) ["#btnZip","#btnMerged","#btnManifest","#btnIndex"].forEach(s => $(s).disabled = false);
+  updStats();
+}
+
+/* ============================== экспорт пакета ============================== */
+function fileRows(){ return state.results.filter(r => r.text || r.blob); }
+function manifestObj(){
+  return {
+    app: APP_NAME + " " + APP_VERSION, build: BUILD_DATE, generated: isoNow(),
+    params: { format: state.fmt, concurrency: +$("#conc").value, retries: state.ret, aggressive: state.aggrOn, fallback: state.fallbackOn },
+    files: fileRows().map(r => ({ url: r.url, file: r.name, title: r.title, method: r.via, words: r.words, size: r.size }))
+  };
+}
+function indexMd(){
+  const rows = fileRows().map((r, i) => "| " + (i + 1) + " | " + escapeHtml(r.title.slice(0, 60)) + " | `" + r.name + "` | " + r.via + " |");
+  return "# INDEX — MEGA_TANK_" + state.stamp + "\n\n| # | Заголовок | Файл | Метод |\n|---|---|---|---|\n" + rows.join("\n") + "\n";
+}
+
+function downloadMerged(){
+  const rs = fileRows();
+  if(!rs.length) return;
+  const ext = fmtExt(state.fmt);
+  let merged = "";
+  if($("#merge").checked && state.fmt !== "html" && state.fmt !== "doc" && state.fmt !== "pdf"){
+    merged += "# MEGA_TANK_" + state.stamp + " · " + rs.length + " файлов\n\n";
+    rs.forEach((r, i) => merged += "- " + (i + 1) + ". " + r.title + " — `" + r.name + "`\n");
+    merged += "\n---\n\n";
+  }
+  const sep = (state.fmt === "html" || state.fmt === "doc") ? "\n<hr>\n" : "\n\n\n";
+  rs.forEach((r, i) => { merged += (i ? sep : "") + (r.blob ? "" : r.text); });
+  download("MEGA_FULL_" + state.stamp + "." + ext, merged, MIME[state.fmt]);
+  toast("Скачан merged", "MEGA_FULL_" + state.stamp + "." + ext);
+}
+
+function downloadZip(){
+  const rs = fileRows();
+  if(!rs.length) return;
+  if(!window.JSZip){ toast("ZIP недоступен", "нет библиотеки JSZip (CDN?) — используйте merged", "warn"); return downloadMerged(); }
+  const zip = new JSZip();
+  rs.forEach(r => { if(!r.blob) zip.file(r.name, r.text); });
+  zip.file("manifest.json", JSON.stringify(manifestObj(), null, 2));
+  zip.file("INDEX.md", indexMd());
+  zip.generateAsync({ type: "blob" }).then(b => {
+    download("MEGA_TANK_" + state.stamp + ".zip", b);
+    toast("Скачан ZIP", rs.length + " файлов · " + humanSize(b.size));
+  });
+}
+
+/* ============================== список URL ============================== */
+function readUrls(){
+  return $("#urls").value.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+}
+function renderChips(urls){
+  const box = $("#urlChips");
+  box.innerHTML = "";
+  const hosts = [];
+  urls.forEach(u => { try{ const h = new URL(normalizeUrl(u)).hostname; if(!hosts.includes(h)) hosts.push(h); }catch(e){} });
+  hosts.slice(0, 12).forEach(h => {
+    const s = document.createElement("span");
+    s.textContent = h;
+    s.style.cssText = "display:inline-block;padding:2px 9px;margin:2px;border-radius:10px;font-size:11px;opacity:.8";
+    box.appendChild(s);
+  });
+  if(hosts.length > 12){
+    const s = document.createElement("span");
+    s.textContent = "+" + (hosts.length - 12);
+    s.style.cssText = "padding:2px 6px;font-size:11px;opacity:.6";
+    box.appendChild(s);
+  }
+}
+function updCount(){
+  const u = readUrls();
+  $("#urlCount").textContent = String(u.length);
+  renderChips(u);
+}
+
+/* ============================== init ============================== */
+function init(){
+  $("#concVal").textContent = $("#conc").value;
+  $("#retVal").textContent = $("#ret").value;
+  $("#conc").addEventListener("input", e => $("#concVal").textContent = e.target.value);
+  $("#ret").addEventListener("input", e => $("#retVal").textContent = e.target.value);
+  ["merge","aggr","fallback","demo"].forEach(id => {
+    const el = $("#" + id);
+    const lbl = el.closest("label");
+    if(lbl) lbl.classList.toggle("on", el.checked);
+    el.addEventListener("change", () => lbl && lbl.classList.toggle("on", el.checked));
+  });
+  $("#urls").addEventListener("input", updCount);
+  $("#btnSample").addEventListener("click", () => {
+    $("#urls").value = ["https://en.wikipedia.org/wiki/Web_scraping", "https://en.wikipedia.org/wiki/Parser_(disambiguation)", "https://example.com"].join("\n");
+    updCount();
+  });
+  $("#btnDedupe").addEventListener("click", () => {
+    const seen = new Set(), out = [];
+    readUrls().forEach(u => { const k = u.toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push(u); } });
+    $("#urls").value = out.join("\n"); updCount();
+    toast("Дубликаты удалены", out.length + " ссылок");
+  });
+  $("#btnNormalize").addEventListener("click", () => {
+    $("#urls").value = readUrls().map(normalizeUrl).join("\n"); updCount();
+  });
+  $("#btnClearUrls").addEventListener("click", () => { $("#urls").value = ""; updCount(); });
+  $("#btnStart").addEventListener("click", run);
+  $("#btnStop").addEventListener("click", () => { state.stopReq = true; setPhase("stopping"); });
+  const logBtns = $$(".logbar button");
+  logBtns.forEach(b => b.addEventListener("click", () => {
+    logFilter = b.dataset.filter || "all";
+    logBtns.forEach(x => x.classList.toggle("on", x === b));
+    rebuildLog();
+  }));
+  $("#btnAuto").addEventListener("click", () => {
+    autoScroll = !autoScroll;
+    $("#btnAuto").classList.toggle("on", autoScroll);
+  });
+  $("#btnCopyLog").addEventListener("click", () => {
+    const txt = logLines.map(l => "[" + l.t + "] " + l.msg).join("\n");
+    if(navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast("Журнал скопирован", logLines.length + " строк"));
+  });
+  $("#btnClearLog").addEventListener("click", () => { logLines = []; rebuildLog(); });
+  $("#btnZip").addEventListener("click", downloadZip);
+  $("#btnMerged").addEventListener("click", downloadMerged);
+  $("#btnManifest").addEventListener("click", () => {
+    download("manifest_" + state.stamp + ".json", JSON.stringify(manifestObj(), null, 2), "application/json");
+  });
+  $("#btnIndex").addEventListener("click", () => download("INDEX_" + state.stamp + ".md", indexMd(), MIME.md));
+  updCount();
+  setPhase("idle"); setStatus("готов");
+  log("MEGA TANK WEB CONSOLE готова", "head");
+  log("Рекомендуется запуск PREVIEW_SERVER.py — тогда предпросмотр идёт через локальный браузерный рендеринг, без публичных CORS-прокси", "info");
+}
+
+init();
+</script>
+</body>
+</html>
