@@ -1,0 +1,21 @@
+pl-4 pr-3 py-3 border-l-4 border-amber-500 bg-amber-50/40 dark:bg-amber-900/30 rounded-r-lg">
+                    <p class="text-sm font-medium text-amber-900 dark:text-amber-100 leading-relaxed" data-ref="https://www.browserless.io/blog/chrome-remote-debugging|1">
+                      <i data-lucide="triangle-alert" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+                      Предупреждение: Порт удаленной отладки (--remote-debugging-port) является чувствительной функцией безопасности. Он должен быть привязан только к локальному использованию (например, localhost) и никогда не должен быть открыт на публичном интерфейсе.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hs-accordion card-interactive bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+              <button class="hs-accordion-toggle w-full flex justify-between items-center p-4 text-left hover:bg-primary-50 dark:hover:bg-gray-700/50 transition-colors rounded-xl" id="hs-arch-2">
+                <div class="flex items-center space-x-4">
+                  <div class="flex-shrink-0 w-12 h-12 bg-accent-100 dark:bg-accent-900/30 rounded-lg flex items-center justify-center">
+                    <i data-lucide="file-code" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                  </div>
+                  <span class="font-semibold text-lg text-accent-700 dark:text-accent-300">Параметры командной строки</span>
+                </div>
+                <i data-lucide="chevron-down" class="hs-accordion-active:rotate-180 transition-transform duration-300 w-5 h-5 text-accent-600 dark:text-accent-400"></i>
+              </button>
+              <div id="hs-collapse-arch-2" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duratio

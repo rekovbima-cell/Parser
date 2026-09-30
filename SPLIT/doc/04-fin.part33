@@ -1,0 +1,48 @@
+| | | | | |")
+    lines.append("")
+    lines.append("Полный журнал прогона: RUN.log")
+
+    with open(os.path.join(out_dir, "INDEX.md"), "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    return totals
+
+==============================================================================
+GUI
+==============================================================================
+class App:
+    def init(self, root):
+        self.root = root
+        self.ui_q = queue.Queue()
+        self.stop_event = threading.Event()
+        self.lock = threading.Lock()
+        self.is_running = False
+        self.lastoutputdir = None
+        self.log_buffer = []
+        self.browsermanager = ExternalBrowserManager(logcb=self.log)
+
+        root.title(f"🚀 {APPNAME} v{APPVERSION}")
+        root.configure(bg="#12121f")
+        root.geometry("880x1000")
+        root.minsize(820, 760)
+        root.resizable(True, True)
+        root.protocol("WMDELETEWINDOW", self.on_close)
+
+        style = ttk.Style(root)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+        style.configure("TProgressbar", troughcolor="#1e1e1e", background="#00aa44", thickness=14)
+        style.configure("TCombobox", fieldbackground="#1e1e1e", background="#1e1e1e",
+                        foreground="#ffffff", arrowcolor="#00ff88")
+        style.map("TCombobox", fieldbackground=[("readonly", "#1e1e1e")],
+                  foreground=[("readonly", "#ffffff")])
+
+        # --- Заголовок ---
+        header = tk.Frame(root, bg="#1a1a2e")
+        header.pack(fill="x")
+        tk.Label(header, text=f"🚀 {APPNAME} v{APPVERSION}", font=("Segoe UI", 16, "bold"),
+                 bg="#1a1a2e", fg="#00ff88", pady=8).pack()
+        tk.Label(header, text="Внешние браузеры • Профили и cookies • CDP • "
+                              "Любой формат • Параллельно",
+                 font=("Segoe UI", 

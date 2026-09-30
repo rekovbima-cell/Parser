@@ -1,0 +1,41 @@
+ md_text
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(full_md)
+                    result["word_count"] = len(full_md.split())
+                    result["_text"] = full_md
+                elif fmt == "docx":
+                    from docx import Document
+                    text_content = extract_page_text(page)
+                    doc = Document()
+                    doc.add_heading(title or url, 0)
+                    doc.add_paragraph(f"Источник: {url}")
+                    doc.add_paragraph(f"Сохранено: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    doc.add_heading('Содержимое:', level=1)
+                    for para in text_content.split('\n'):
+                        if para.strip():
+                            doc.add_paragraph(para.strip())
+                    doc.save(file_path)
+                    result["word_count"] = len(text_content.split())
+                    result["_text"] = text_content
+
+                browser.close()
+
+                size = os.path.getsize(file_path)
+                result["status"] = "ok"
+                result["file"] = os.path.basename(file_path)
+                result["size_bytes"] = size
+                result["method"] = "playwright"
+                log_cb(f"   ✅ {fmt.upper()}: {human_size(size)} -> {os.path.basename(file_path)}")
+                last_error = None
+                break
+
+        except Exception as e:
+            last_error = str(e)
+            log_cb(f"   ⚠️ Попытка {attempt}/{max_attempts} не удалась: {last_error[:120]}")
+            if attempt < max_attempts:
+                time.sleep(random.uniform(2.0, 4.0))
+
+    if last_error and result["status"] != "ok" and fmt in ("html", "txt", "md", "docx"):
+        # --- Запасной метод: обычный requests + BeautifulSoup ---
+        try:
+            log_cb("   🔁 Пробую запасной метод (req

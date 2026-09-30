@@ -1,0 +1,25 @@
+00 dark:text-primary-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Реализуйте потокобезопасную архитектуру с использованием threading.Lock</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="circle-check" class="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Используйте storageState для сохранения и восстановления аутентифицированных сессий</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="card-interactive p-6 bg-white/90 backdrop-blur-sm dark:bg-gray-900 rounded-xl shadow-md">
+              <h3 class="text-xl font-semibold text-accent-700 dark:text-accent-300 mb-4" data-ref="https://developer.chrome.com/blog/remote-debugging-port|2">
+                Ограничения и риски
+              </h3>
+              <ul class="space-y-3">
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="triangle-alert" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Chrome 136+ игнорирует переключатели отладки при использовании с каталогом данных пользователя по умолчанию</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="triangle-alert" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Только Chromium поддерживает подключение через CDP, Firefox требует Juggler</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="triangle-alert" class="w-5 h-5 text-amber-600 dark:t

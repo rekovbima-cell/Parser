@@ -1,0 +1,56 @@
+     print(f"{'✅' if ok else '❌'} {pkg}")
+
+        if self.missing:
+            print("\n" + "=" * 70)
+            print(f"🚀 УСТАНАВЛИВАЮ {len(self.missing)} ПАКЕТ(ОВ)...")
+            print("=" * 70)
+            for p in list(self.missing):
+                if self.install(p):
+                    self.missing.remove(p)
+
+        if not self.chromium_ready():
+            print("\n" + "=" * 70)
+            print("🌐 БРАУЗЕР CHROMIUM НЕ ГОТОВ — УСТАНАВЛИВАЮ...")
+            print("=" * 70)
+            self.install_browsers()
+            if not self.chromium_ready():
+                self.missing.append("chromium-browser")
+
+        print("\n" + "=" * 70)
+        if not self.missing:
+            print("✅ ВСЁ ГОТОВО! Запускаю интерфейс...")
+        else:
+            print(f"⚠️ Не установлено: {', '.join(self.missing)}")
+            print("   Попробуй запустить файл ещё раз или установить вручную:")
+            print(f"   {sys.executable} -m pip install " + " ".join(self.missing))
+        print("=" * 70)
+        return len(self.missing) == 0
+
+
+# ==============================================================================
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# ==============================================================================
+def sanitize(name):
+    name = re.sub(r'^https?://', '', name)
+    name = re.sub(r'[^\w\-_.]', '_', name)
+    name = name.strip('_')
+    while "__" in name:
+        name = name.replace("__", "_")
+    return (name or "page")[:100]
+
+
+def slugify(text):
+    text = re.sub(r'[^\w\-]+', '-', text.strip().lower())
+    return re.sub(r'-+', '-', text).strip('-')[:60] or "source"
+
+
+def human_size(num_bytes):
+    for unit in ("Б", "КБ", "МБ", "ГБ"):
+        if num_bytes < 1024:
+            return f"{num_bytes:.1f} {unit}" if unit != "Б" else f"{int(num_bytes)} {unit}"
+        num_bytes /= 1024
+    return f"{num_bytes:.1f} ТБ"
+
+
+def now_stamp():
+    return datetime.

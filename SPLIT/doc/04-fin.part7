@@ -1,0 +1,45 @@
+able", "BravePortable/App/Brave-bin"],
+            "engine": "chromium",
+            "profile_arg": "--user-data-dir",
+            "default_profile": ["Data/profile"],
+        },
+    }
+
+    SYSTEM_CANDIDATES = [
+        ("Google Chrome", "chromium", "chrome", [
+            r"%ProgramFiles%\Google\Chrome\Application\chrome.exe",
+            r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe",
+            r"%LocalAppData%\Google\Chrome\Application\chrome.exe",
+        ]),
+        ("Microsoft Edge", "chromium", "msedge", [
+            r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe",
+            r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe",
+        ]),
+        ("Brave (system)", "chromium", "brave", [
+            r"%ProgramFiles%\BraveSoftware\Brave-Browser\Application\brave.exe",
+            r"%ProgramFiles(x86)%\BraveSoftware\Brave-Browser\Application\brave.exe",
+        ]),
+        ("Mozilla Firefox", "firefox", None, [
+            r"%ProgramFiles%\Mozilla Firefox\firefox.exe",
+            r"%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe",
+            "/usr/bin/firefox",
+            "/Applications/Firefox.app/Contents/MacOS/firefox",
+        ]),
+        ("LibreWolf (system)", "firefox", None, [
+            r"%ProgramFiles%\LibreWolf\librewolf.exe",
+            "/usr/bin/librewolf",
+            "/Applications/LibreWolf.app/Contents/MacOS/librewolf",
+        ]),
+        ("Chromium (linux)", "chromium", None, [
+            "/usr/bin/chromium", "/usr/bin/chromium-browser",
+            "/snap/bin/chromium",
+        ]),
+        ("Google Chrome (mac)", "chromium", "chrome", [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        ]),
+        ("Microsoft Edge (mac)", "chromium", "msedge", [
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+        ]),
+    ]
+
+    def init(self, log_cb=None

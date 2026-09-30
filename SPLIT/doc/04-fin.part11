@@ -1,0 +1,40 @@
+лизовать доступ (профиль/CDP)
+            "warnings": [],
+        }
+
+        # --- 1) CDP к живому браузеру ---
+        if attach_cdp:
+            ws, ver = self.probecdp(cdpport)
+            if ws:
+                plan.update(mode="cdp", engine="chromium", cdp_url=ws,
+                            ownsbrowser=False, ownscontext=False, serial=True,
+                            label=f"CDP 127.0.0.1:{cdp_port}")
+                cb(f"🔌 Найден запущенный браузер: {ver} → подключаюсь через CDP "
+                   f"(ws на 127.0.0.1:{cdp_port})")
+                plan["warnings"].append("Браузер пользователя не закрывается скриптом")
+                return plan
+            cb(f"⚠️ На 127.0.0.1:{cdp_port} нет CDP. Chrome 136+ игнорирует "
+               f"--remote-debugging-port для профиля ПО УМОЛЧАНИЮ: нужен отдельный "
+               f"--user-data-dir. Запустите браузер так:\n"
+               f'      chrome.exe --remote-debugging-port={cdp_port} '
+               f'--remote-debugging-address=127.0.0.1 --user-data-dir=""')
+            plan["warnings"].append(f"CDP на порту {cdp_port} не найден")
+
+        # --- 2) bundled ---
+        if not browsername or browsername == SYSTEM_BROWSER:
+            plan["label"] = SYSTEM_BROWSER
+            if profilepath and useprofile:
+                eff, iscopy = self.prepareprofile(profilepath, copyprofile, cb)
+                plan.update(mode="persistent", userdatadir=eff,
+                            profileiscopy=is_copy, serial=True,
+                            label=f"bundled + профиль {os.path.basename(eff)}")
+            return plan
+
+        # --- 3) внешний браузер ---
+        cfg = self.find(browser_name)
+        if not cfg:
+            cb(f"⚠️ Браузер «{browser_name}» не найден — откат на bundled Chromium")
+            plan["warnings"].append(f"{browser_name}: исполняемый файл не найден")
+            return plan
+
+        plan["eng

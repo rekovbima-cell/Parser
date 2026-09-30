@@ -1,0 +1,51 @@
+ify недоступен или дал пустоту ---
+    lines = []
+    for el in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "a"]):
+        if el.name and re.match(r'h[1-6]', el.name):
+            level = int(el.name[1])
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(f"{'#' * level} {txt}")
+        elif el.name == "li":
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(f"- {txt}")
+        elif el.name == "p":
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(txt)
+    text = "\n\n".join(lines) if lines else soup.get_text("\n", strip=True)
+    return text
+
+
+def fetch_via_requests(url, headers):
+    """Запасной метод получения контента, если Playwright не смог."""
+    import requests
+    resp = requests.get(url, headers=headers, timeout=20, allow_redirects=True)
+    resp.raise_for_status()
+    return resp.text, resp.status_code
+
+
+# ==============================================================================
+# ОСНОВНАЯ ЛОГИКА СКРАПИНГА (без UI — переиспользуется потоками)
+# ==============================================================================
+def scrape_one(url, fmt, out_dir, settings, log_cb):
+    """Скрапит один URL и сохраняет результат на диск.
+    Возвращает dict с результатами для манифеста."""
+    result = {
+        "url": url, "title": "", "status": "failed", "format": fmt,
+        "file": None, "size_bytes": 0, "word_count": None,
+        "blocked_suspected": False, "method": "playwright",
+        "attempts": 0, "error": None, "elapsed_sec": 0.0,
+    }
+    t0 = time.time()
+
+    ok_dns, dns_err = quick_dns_check(url)
+    if not ok_dns:
+        result["error"] = dns_err
+        result["elapsed_sec"] = round(time.time() - t0, 2)
+        log_cb(f"   ❌ {dns_err}")
+        return result
+
+    safe_name = sanitize(url)
+    file_path = 

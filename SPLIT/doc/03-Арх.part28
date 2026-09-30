@@ -1,0 +1,21 @@
+y-6">
+          <p class="text-lg text-gray-700 dark:text-gray-300 leading-relaxed" data-ref="https://playwright.dev/docs/api/class-browsertype|5">
+            Playwright предлагает метод connectOverCDP для подключения к существующему экземпляру браузера на основе Chromium с использованием Chrome DevTools Protocol (CDP). Это соединение устанавливается путем предоставления URL-адреса конечной точки веб-сокета CDP. Этот метод поддерживается только для браузеров на основе Chromium и имеет более низкое качество, чем родной протокол Playwright.
+          </p>
+
+          <div class="grid md:grid-cols-2 gap-8">
+            <div class="card-interactive p-6 bg-white/90 backdrop-blur-sm dark:bg-gray-900 rounded-xl shadow-md">
+              <h3 class="text-xl font-semibold text-primary-700 dark:text-primary-300 mb-4" data-ref="https://stackoverflow.com/questions/62281859/how-to-use-installed-version-of-chrome-in-playwright|7">
+                Ключевые рекомендации
+              </h3>
+              <ul class="space-y-3">
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="circle-check" class="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Версия внешнего Chrome должна совпадать с версией Chromium, с которым был построен Playwright</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="circle-check" class="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Используйте --user-data-dir для указания каталога пользовательских данных</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="circle-check" class="w-5 h-5 text-primary-6

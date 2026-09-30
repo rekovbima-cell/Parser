@@ -1,0 +1,32 @@
+        self.btn = tk.Button(btn_row, text="🚀 НАЧАТЬ", command=self.start,
+                             bg="#00aa44", fg="white", font=("Segoe UI", 12, "bold"),
+                             relief="flat", cursor="hand2")
+        self.btn.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        self.stopbtn = tk.Button(btnrow, text="⛔ СТОП", command=self.stop, state="disabled",
+                                  bg="#aa2222", fg="white", font=("Segoe UI", 12, "bold"),
+                                  relief="flat", cursor="hand2")
+        self.stop_btn.pack(side="left", fill="x", expand=True, padx=(5, 0))
+
+        # --- Прогресс ---
+        self.progress = tk.DoubleVar()
+        ttk.Progressbar(root, variable=self.progress, maximum=100,
+                        style="TProgressbar").pack(fill="x", padx=20, pady=5)
+
+        # --- Журнал ---
+        log_head = tk.Frame(root, bg="#12121f")
+        log_head.pack(fill="x", padx=20, pady=(6, 0))
+        tk.Label(log_head, text="📋 Журнал", font=("Segoe UI", 9, "bold"),
+                 bg="#12121f", fg="#00ff88").pack(side="left")
+        tk.Button(loghead, text="скопировать", command=self.copylog, bg="#2d2d44",
+                  fg="#cccccc", relief="flat", font=("Segoe UI", 8),
+                  cursor="hand2").pack(side="right", padx=(6, 0))
+        tk.Button(loghead, text="очистить", command=self.clearlog, bg="#2d2d44",
+                  fg="#cccccc", relief="flat", font=("Segoe UI", 8),
+                  cursor="hand2").pack(side="right")
+
+        log_frame = tk.Frame(root, bg="#0d0d0d", highlightbackground="#1e1e1e",
+                             highlightthickness=1)
+        log_frame.pack(fill="both", expand=True, padx=20, pady=(4, 5))
+        self.logtext = tk.Text(logframe, height=12, state="disabled", bg="#0d0d0d",
+                                fg="#00ff88", font=("Consolas", 9), relief="flat",
+               

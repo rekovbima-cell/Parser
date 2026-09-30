@@ -1,0 +1,42 @@
+================================================================
+class ExternalBrowserManager:
+    """Обнаружение, запуск и подключение внешних портативных/системных браузеров.
+
+    Возвращает ПЛАН запуска (dict), а не сам браузер: реальное открытие выполняет
+    BrowserSession внутри sync_playwright-контекста воркера.
+    """
+
+    PORTABLE_PATTERNS = {
+        "Chrome Portable": {
+            "exe_names": ["GoogleChromePortable.exe", "chrome.exe"],
+            "sub_paths": ["GoogleChromePortable/App/Chrome-bin", "GoogleChromePortable",
+                          "ChromePortable/App/Chrome-bin", "ChromePortable"],
+            "engine": "chromium",
+            "profile_arg": "--user-data-dir",
+            "default_profile": ["Data/profile", "App/Chrome-bin/Data/profile"],
+        },
+        "Chromium Portable": {
+            "exe_names": ["chrome.exe", "chromium.exe"],
+            "sub_paths": ["ChromiumPortable", "ChromiumPortable/App/Chromium-bin"],
+            "engine": "chromium",
+            "profile_arg": "--user-data-dir",
+            "default_profile": ["Data/profile"],
+        },
+        "Firefox Portable": {
+            "exe_names": ["FirefoxPortable.exe", "firefox.exe"],
+            "sub_paths": ["FirefoxPortable/App/Firefox64", "FirefoxPortable/App/Firefox",
+                          "FirefoxPortable"],
+            "engine": "firefox",
+            "profile_arg": "-profile",
+            "default_profile": ["Data/profile"],
+        },
+        "LibreWolf Portable": {
+            "exe_names": ["librewolf.exe", "LibreWolfPortable.exe"],
+            "sub_paths": ["LibreWolfPortable", "LibreWolfPortable/App/LibreWolf", "LibreWolf"],
+            "engine": "firefox",
+            "profile_arg": "-profile",
+            "default_profile": ["Data/profile"],
+        },
+        "Brave Portable": {
+            "exe_names": ["brave.exe"],
+            "sub_paths": ["BravePort

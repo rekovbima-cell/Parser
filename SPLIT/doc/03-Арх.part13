@@ -1,0 +1,27 @@
+ конечной точке Juggler, опубликованной браузерным сервером, запущенным с launch-server. Создает только один контекст по умолчанию.
+              </p>
+            </div>
+          </div>
+
+          <div class="pl-4 pr-3 py-3 border-l-4 border-amber-500 bg-amber-50/40 dark:bg-amber-900/30 rounded-r-lg">
+            <p class="text-sm font-medium text-amber-900 dark:text-amber-100 leading-relaxed" data-ref="https://github.com/feder-cr/invisible_playwright/wiki/playwright-connect-over-cdp-firefox|28">
+              <i data-lucide="triangle-alert" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+              Ограничение: Подключение к запущенному экземпляру Firefox через playwright.sync_api.BrowserType.connect_over_cdp() невозможно, потому что Firefox не раскрывает конечную точку Chrome DevTools Protocol (CDP).
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Profile Management Section -->
+    <section id="profiles" class="py-20 bg-white/80 dark:bg-gray-900" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-primary-700 dark:text-primary-300">
+          Управление пользовательскими профилями
+        </h2>
+
+        <div class="space-y-8">
+          <div class="grid md:grid-cols-2 gap-8 items-center">
+            <img
+              src="https://cdn.qwenlm.ai/d09b27ad-8fe1-4a11-b761-510992da8aba/c7b08fbb-91b0-42dc-b1ab-a7ccc6af5d70/38c4ffa9-1afe-4816-b505-dc905b03a229.png?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZXNvdXJjZV91c2VyX2lkIjoiZDA5YjI3YWQtOGZlMS00YTExLWI3NjEtNTEwOTkyZGE4YWJhIiwicmVzb3VyY2VfaWQiOiJjN2IwOGZiYi05MWIwLTQyZGMtYjFhYi1hN2NjYzZhZjVkNzAiLCJyZXNvdXJjZV9jaGF0X2lkIjpudWxsfQ.ACcC9hBwmt66QaH1lbEA1I8QzbdsCHId1EnUUtgG7Zg"
+              alt="Диаграмма управления профилями: три прямоугольных блока с закругленными углами расположены вертикально на светло-сером фоне #f

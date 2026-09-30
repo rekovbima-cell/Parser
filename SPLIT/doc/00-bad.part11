@@ -1,0 +1,36 @@
+"none" stroke="url(#lg)" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M22 28v-6h11v6" fill="none" stroke="url(#lg)" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M33 25h13" stroke="url(#lg)" stroke-width="2.6" stroke-linecap="round"/>
+        <circle cx="20" cy="46" r="3.4" fill="none" stroke="#00ff88" stroke-width="2"/>
+        <circle cx="32" cy="46" r="3.4" fill="none" stroke="#00ff88" stroke-width="2"/>
+        <circle cx="44" cy="46" r="3.4" fill="none" stroke="#00ff88" stroke-width="2"/>
+        <path d="M15 14h6m-3-3v6" stroke="#00ff88" stroke-width="1.8" stroke-linecap="round" opacity=".85"/>
+        <path d="M44 12h6v6" fill="none" stroke="#00a3ff" stroke-width="1.8" stroke-linecap="round" opacity=".8"/>
+      </svg>
+    </div>
+    <div class="tb-title">
+      <h1>MEGA <span>TANK</span> <span style="font-size:13px;color:var(--muted);font-family:var(--mono);font-weight:400">v3.0</span></h1>
+      <p>Universal Documentation Scraper — любой сайт · любой формат · параллельно · без ключей</p>
+    </div>
+    <div class="tb-badges">
+      <span class="badge acc">BUILD 30.06.2026</span>
+      <span class="badge">PDF · HTML · TXT · DOCX · MD</span>
+      <span class="pill-status" id="statusPill"><i class="dot"></i><span id="statusTxt">ОЖИДАНИЕ</span></span>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- ============ LEFT ============ -->
+    <div class="col col-left">
+
+      <section class="panel">
+        <h2>
+          <span class="h2-l">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+            Список URL
+          </span>
+          <span class="badge" id="urlCount" style="padding:3px 9px">0</span>
+        </h2>
+        <div class="body">
+          <textarea id="urls" spellcheck="fals

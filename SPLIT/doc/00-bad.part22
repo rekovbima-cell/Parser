@@ -1,0 +1,45 @@
+ineMd(ch,base).trim(); if(v) s += `*${v}*`; return; }
+    if(t === "code"){ const v = ch.textContent.trim(); if(v) s += "`"+v+"`"; return; }
+    if(t === "a"){
+      const href = absUrl(ch.getAttribute("href"), base);
+      const txt = inlineMd(ch,base).trim();
+      if(href) s += `[${txt || href}](${href})`; else s += txt;
+      return;
+    }
+    if(t === "img"){
+      const src = absUrl(ch.getAttribute("src") || ch.getAttribute("data-src"), base);
+      if(src) s += `![${(ch.getAttribute("alt")||"").replace(/[\[\]]/g,"")}](${src})`;
+      return;
+    }
+    s += inlineMd(ch, base);
+  });
+  return s;
+}
+function tableToMd(tbl){
+  const rows = Array.from(tbl.querySelectorAll("tr")).slice(0,60);
+  if(!rows.length) return "";
+  const cells = r => Array.from(r.querySelectorAll("th,td")).map(c=>inlineMd(c,"").replace(/\n/g," ").replace(/\|/g,"\\|").trim() || " ");
+  const head = cells(rows[0]);
+  const out = ["| " + head.join(" | ") + " |", "|" + head.map(()=> "--- ").join("|")];
+  rows.slice(1).forEach(r=>{ const c = cells(r); if(c.length) out.push("| " + c.join(" | ") + " |"); });
+  return out.join("\n");
+}
+function htmlToMarkdown(root, base){
+  const out = [];
+  const walk = node => {
+    node.childNodes.forEach(ch=>{
+      if(ch.nodeType === 3){
+        const t = ch.textContent.replace(/\s+/g," ").trim();
+        if(t && node === root) out.push(t);
+        return;
+      }
+      if(ch.nodeType !== 1) return;
+      const t = ch.tagName.toLowerCase();
+      if(/^h[1-6]$/.test(t)){
+        const v = inlineMd(ch,base).trim(); if(v) out.push("#".repeat(+t[1]) + " " + v);
+      } else if(t === "p"){
+        const v = inlineMd(ch,base).trim(); if(v) out.push(v);
+      } else if(t === "ul" || t === "ol"){
+        Array.from(ch.children).forEach((li,i)=>{
+          if(li.tagName.toLowerCase() !== "li") return;
+          const nested = Array.from(li.querySelectorAll(":scope > ul, 

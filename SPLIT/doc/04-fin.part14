@@ -1,0 +1,58 @@
+wnsbrowser
+        self.ownscontext = ownscontext
+        self.engine = engine
+        self.label = label
+        self.page = None
+        self._closed = False
+
+    def new_page(self):
+        self.page = self.context.new_page()
+        return self.page
+
+    def close(self):
+        if self._closed:
+            return
+        self._closed = True
+        for target, owner in ((self.page, True), (self.context, self.owns_context),
+                              (self.browser, self.owns_browser)):
+            if target is None or not owner:
+                continue
+            try:
+                target.close()
+            except Exception:
+                pass
+
+    def enter(self):
+        return self
+
+    def exit(self, exc_type, exc, tb):
+        self.close()
+        return False
+
+def ctxoptions(ua, locale, tz, viewport, plan, keep_headers=True):
+    """Опции контекста. В профильном режиме НЕ подменяем UA/заголовки:
+    смысл использования реального профиля — его собственный «прогретый» отпечаток."""
+    opts = {
+        "viewport": viewport,
+        "locale": locale,
+        "timezone_id": tz,
+        "devicescalefactor": 1,
+    }
+    spoof = plan["mode"] not in ("persistent", "cdp")
+    if spoof:
+        opts["user_agent"] = ua
+        if keep_headers:
+            opts["extrahttpheaders"] = build_headers(ua, locale)
+        opts["permissions"] = ["notifications"]
+    return opts
+
+def opensession(p, plan, ua, locale, tz, viewport, stealthon, log_cb):
+    """Реализует план запуска. Бросает исключение — вызывающий решает, что делать."""
+    engine = plan.get("engine", "chromium")
+    btype = p.chromium if engine == "chromium" else p.firefox
+    opts = ctxoptions(ua, locale, tz, viewport, plan)
+    headless = bool(plan.get("headless", True))
+
+    # ---------- CDP: подключение к живой сессии ----------
+    if plan["mode"] == "cdp":
+        browser = p.chromium.connectover

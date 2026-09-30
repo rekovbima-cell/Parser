@@ -1,0 +1,52 @@
+IREFOX_PATH):
+                options.binary_location = FIREFOX_PATH
+            options.add_argument("-headless")
+            options.set_preference("dom.webdriver.enabled", False)
+            options.set_preference("useAutomationExtension", False)
+            options.set_preference("general.useragent.override", USER_AGENT)
+            options.set_preference("dom.max_script_run_time", 30)
+
+            service = Service(GeckoDriverManager().install())
+            _driver = webdriver.Firefox(service=service, options=options)
+            _driver.set_page_load_timeout(PAGE_TIMEOUT)
+            log("браузер готов (Selenium + Firefox)")
+            return _driver
+        except Exception as e:
+            log("браузер недоступен (%s) — будет HTTP-fallback" % str(e).strip()[:120])
+            return None
+
+
+def wait_js(driver):
+    """Ожидание реальной отрисовки JS: readyState + прокрутка + стабилизация."""
+    try:
+        from selenium.webdriver.support.ui import WebDriverWait
+        WebDriverWait(driver, PAGE_TIMEOUT).until(
+            lambda d: d.execute_script("return document.readyState") == "complete"
+        )
+    except Exception:
+        pass
+    last, stable, deadline = -1, 0, time.time() + JS_STABLE_TIMEOUT
+    while time.time() < deadline and stable < 3:
+        try:
+            driver.execute_script(
+                "window.scrollTo(0, Math.max(document.body.scrollHeight,"
+                " document.documentElement.scrollHeight));")
+        except Exception:
+            pass
+        time.sleep(1)
+        try:
+            cur = driver.execute_script(
+                "return (document.body ? (document.body.innerText || '').length : 0)")
+        except Exception:
+            break
+        if cur == last:
+            stable += 1
+        else:
+            stable = 0
+            last = cur
+
+
+def render_browser(url):
+    driver = get_driver()
+    if not driver:
+    

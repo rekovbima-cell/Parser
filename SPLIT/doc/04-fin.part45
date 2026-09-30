@@ -1,0 +1,52 @@
+nfig(state="normal")
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.config(state="disabled")
+
+    @staticmethod
+    def _spin(var, default, lo, hi):
+        try:
+            v = int(var.get())
+        except Exception:
+            v = default
+        return max(lo, min(hi, v))
+
+    # ---------------- Запуск / остановка ----------------
+    def start(self):
+        if self.is_running:
+            return
+        raw_urls = self.urls.get("1.0", tk.END).strip()
+        if not raw_urls:
+            messagebox.showwarning("Ошибка", "Введите хотя бы один URL!")
+            return
+
+        seen, valid_urls = set(), []
+        for u in (x.strip() for x in raw_urls.splitlines()):
+            if not u:
+                continue
+            if not u.startswith(("http://", "https://")):
+                self.log(f"⚠️ Невалидный URL пропущен (нужен http:// или https://): {u}", "warn")
+                continue
+            if u in seen:
+                self.log(f"ℹ️ Дубликат пропущен: {u}", "mut")
+                continue
+            seen.add(u)
+            valid_urls.append(u)
+
+        if not valid_urls:
+            messagebox.showwarning("Ошибка", "Ни одного валидного URL не найдено!")
+            return
+
+        useprofile = bool(self.useprofile.get())
+        profilepath = self.profilepath_var.get().strip()
+        attach = bool(self.attach_cdp.get())
+        if useprofile and not profilepath:
+            cfg = self.browsermanager.find(self.selectedbrowser.get())
+            if cfg and cfg.get("profile_dir"):
+                profilepath = cfg["profiledir"]
+                self.profilepathvar.set(profile_path)
+            else:
+                messagebox.showwarning("Профиль", "Укажи папку профиля (user-data-dir) "
+                                                 "или сними галку «Использовать профиль».")
+                return
+
+        outdir = os.path.join(BASED

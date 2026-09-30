@@ -1,0 +1,39 @@
+):
+                                with open(file_path, "wb") as f:
+                                    f.write(fetchbytes(url, buildheaders(ua, locale)))
+                                result["method"] = "binary-download"
+                                pdf_ok = True
+
+                        if not pdf_ok and session.engine != "chromium":
+                            body = cleanforprint(extractpagehtml(page), url)
+                            pdffromhtml(body, title, url, filepath, logcb)
+                            pdf_ok = True
+                            result["method"] = "gecko->chromium-print"
+
+                        if not pdf_ok:
+                            raise RuntimeError("не удалось отрендерить PDF этой страницы")
+
+                    elif fmt == "html":
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            f.write(page.content())
+
+                    elif fmt == "txt":
+                        textcontent = extractpage_text(page)
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            f.write(text_content)
+                        result["wordcount"] = len(textcontent.split())
+                        result["text"] = textcontent
+
+                    elif fmt == "md":
+                        mdtext = htmltomarkdown(extractpage_html(page), url)
+                        fullmd = f"# {title or url}\n\nИсточник: {url}\n\n---\n\n" + mdtext
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            f.write(full_md)
+                        result["wordcount"] = len(fullmd.split())
+                        result["text"] = fullmd
+
+                    elif fmt == "docx":
+                        from docx import Document
+                        textcontent = extractpage_text(page)
+                        doc = Document()
+           

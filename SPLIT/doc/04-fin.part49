@@ -1,0 +1,38 @@
+unters["fail"] += 1
+                        self.log(f"   ❌ Не удалось: {url} — {str(res.get('error'))[:150]}", "err")
+                    if res.get("blocked_suspected"):
+                        counters["blocked"] += 1
+                    counters["done"] += 1
+                    self.set_stats(counters["ok"], counters["fail"], counters["blocked"])
+                    self.set_progress(counters["done"] / total * 100)
+
+                if self.stopevent.isset():
+                    break
+                delay = random.uniform(1.0, 3.0) if settings["aggressive"] \
+                    else random.uniform(3.0, 7.0)
+                self.log(f"   ⏱️ [поток {worker_id}] пауза {delay:.1f} сек", "mut")
+                slept = 0.0
+                while slept  {mergedname}", "ok")
+                mergedfilename = mergedname
+            except Exception as e:
+                self.log(f"   ❌ Ошибка объединения: {e}", "err")
+
+        browser_info = {
+            "label": settings["external_browser"],
+            "engine": (manifest[0].get("engine") if manifest else "chromium"),
+            "mode": (manifest[0].get("session_mode") if manifest else "bundled"),
+            "profile": settings["customprofilepath"],
+            "profileisolatedcopy": bool(settings["copyprofile"] and settings["useprofile"]),
+            "cdp": (f"127.0.0.1:{settings['cdpport']}" if settings["attachcdp"] else None),
+            "headless": bool(settings["headless"]),
+        }
+
+        try:
+            totals = writemanifestandindex(manifest, outdir, mergedfilename, browserinfo)
+            self.log("\n📊 manifest.json и INDEX.md записаны", "ok")
+            self.log(f"   Σ объём: {human_size(totals['bytes'])} | Σ слов: {totals['words']}", "mut")
+        except Exception as e:
+            self.log(f"⚠️ Не удалось записать manifest/index: {e}", "warn")
+
+        self.log("\n" + "=" * 62, "head")
+        sta

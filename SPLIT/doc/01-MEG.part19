@@ -1,0 +1,40 @@
+     # --- Лог ---
+        log_frame = tk.LabelFrame(root, text="📋 Журнал", font=("Segoe UI", 9, "bold"),
+                                  padx=5, pady=5, bg="#1e1e1e", fg="#00ff88")
+        log_frame.pack(fill="both", expand=True, padx=20, pady=5)
+        self.log_text = tk.Text(log_frame, height=12, state="disabled",
+                                bg="#0d0d0d", fg="#00ff88", font=("Consolas", 9))
+        sb = ttk.Scrollbar(log_frame, orient="vertical", command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=sb.set)
+        self.log_text.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+
+        # --- Статистика + папка ---
+        stats = tk.Frame(root, bg="#12121f")
+        stats.pack(fill="x", padx=20, pady=(2, 12))
+        self.ok_label = tk.Label(stats, text="✅ 0", font=("Segoe UI", 10, "bold"), fg="#00ff88", bg="#12121f")
+        self.ok_label.pack(side="left", padx=(0, 20))
+        self.fail_label = tk.Label(stats, text="❌ 0", font=("Segoe UI", 10, "bold"), fg="#ff4444", bg="#12121f")
+        self.fail_label.pack(side="left", padx=20)
+        self.folder_btn = tk.Button(stats, text="📂 Открыть папку результата", command=self.open_output_folder,
+                                     state="disabled", bg="#2d2d44", fg="white", font=("Segoe UI", 9))
+        self.folder_btn.pack(side="right")
+
+        self.root.after(80, self._poll_ui)
+
+    # ---------------- UI helpers (потокобезопасные) ----------------
+    def log(self, msg):
+        self.ui_q.put(("log", msg))
+
+    def set_progress(self, pct):
+        self.ui_q.put(("progress", pct))
+
+    def set_stats(self, ok, fail):
+        self.ui_q.put(("stats", (ok, fail)))
+
+    def _poll_ui(self):
+        try:
+            while True:
+                kind, payload = self.ui_q.get_nowait()
+                if kind == "log":
+                    self.log_text.config(state

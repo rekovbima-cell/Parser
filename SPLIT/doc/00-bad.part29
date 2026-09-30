@@ -1,0 +1,43 @@
+ y += 14; });
+    });
+    return pdf.output("blob");
+  }catch(e){ toast("Ошибка PDF", String(e).slice(0, 100), "err"); return null; }
+}
+
+/* ============================== обработка одного URL ============================== */
+async function processUrl(url){
+  const attempts = Math.max(1, 1 + state.ret);
+  for(let a = 1; a <= attempts; a++){
+    if(state.stopReq) return;
+    rotateStealth();
+    let res;
+    try{ res = await fetchPage(url); }catch(e){ res = { ok:false, errors:[String(e).slice(0,90)] }; }
+    if(res.ok){
+      const page = parsePage(res.html);
+      if(looksBlocked(page.title, page.sample)){
+        log("блок/капча → " + url, "vio");
+        if(a < attempts){ await sleep(500); continue; }
+        return record(url, { status:"block", title:page.title, via:res.via });
+      }
+      const c = buildContent(url, page);
+      log("ok · " + c.title.slice(0, 60) + " · via " + res.via, "ok");
+      return record(url, { status:"ok", title:c.title, text:c.text, ext:c.ext, via:res.via });
+    }
+    log("попытка " + a + "/" + attempts + " не удалась (" + (res.errors && res.errors[0] || "?") + ")", "warn");
+    if(a < attempts) await sleep(state.aggrOn ? 250 : 900);
+  }
+  if($("#demo").checked){
+    const d = demoContent(url);
+    log("демо-контент для " + url, "mut");
+    return record(url, { status:"ok", title:d.title, text:d.text, ext:d.ext, via:"demo", demo:true });
+  }
+  record(url, { status:"fail", title:url });
+}
+
+/* ============================== запуск ============================== */
+async function run(){
+  const urls = readUrls();
+  if(!urls.length){ toast("Нет ссылок", "добавьте URL или нажмите «пример»", "warn"); return; }
+  Object.assign(state, { running:true, stopReq:false, idx:0, urls:urls, results:[], ok:0, fail:0, block:0, size:0, words:0, active:0, stamp:nowStamp() });
+  state.fmt = FORMAT_MAP[$("#fmt").value] ? $("#fmt").value : "md";
+  state.ret

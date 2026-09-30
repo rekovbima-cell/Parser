@@ -1,0 +1,41 @@
+cdp(plan["cdp_url"], timeout=20000)
+        if browser.contexts:
+            context = browser.contexts[0]
+            owns_context = False
+            log_cb("   🔌 Использую существующий контекст пользователя (cookies/сессия живые)")
+        else:
+            context = browser.new_context(opts)
+            owns_context = True
+        return BrowserSession(browser, context, owns_browser=False,
+                              ownscontext=ownscontext, engine="chromium",
+                              label=plan["label"])
+
+    # ---------- persistent context (профиль) ----------
+    if plan["mode"] == "persistent" and plan.get("userdatadir"):
+        kwargs = dict(opts)
+        kwargs.pop("permissions", None)          # в Gecko набор прав отличается
+        kwargs["headless"] = headless
+        if engine == "chromium":
+            if plan.get("executable_path"):
+                kwargs["executablepath"] = plan["executablepath"]
+            elif plan.get("channel"):
+                kwargs["channel"] = plan["channel"]
+            kwargs["args"] = list(plan.get("args", []))
+        else:
+            if plan.get("executable_path"):
+                kwargs["executablepath"] = plan["executablepath"]
+            kwargs["args"] = list(plan.get("args", []))
+            kwargs["firefoxuserprefs"] = dict(GECKO_PREFS)
+        context = btype.launchpersistentcontext(plan["userdatadir"], kwargs)
+        session = BrowserSession(None, context, ownsbrowser=False, ownscontext=True,
+                                 engine=engine, label=plan["label"])
+        session.browser = getattr(context, "browser", None)
+        if stealth_on and engine == "chromium":
+            try:
+                context.addinitscript(buildstealthscript(ua, locale))
+            except Exception:
+                pass
+        return session
+
+    # ---------- обычный запуск (bundled / внешний exe) ----------
+    launch_k

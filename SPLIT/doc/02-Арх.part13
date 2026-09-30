@@ -1,0 +1,38 @@
+f.log_cb(f"   📂 Профиль: {profile_path}")
+        
+        return engine, {
+            "executable_path": exe_path,
+            "args": args,
+            "headless": headless,
+            "engine": engine
+        }
+
+# ==============================================================================
+# STEALTH & UTILS
+# ==============================================================================
+STEALTH_TEMPLATE = r"""
+(() => {
+    const LANGS    = __LANGS__;
+    const PLATFORM = __PLATFORM__;
+    const HW       = __HW__;
+    const MEM      = __MEM__;
+    const VENDOR   = 'Google Inc.';
+
+    try { delete Object.getPrototypeOf(navigator).webdriver; } catch (e) {}
+    try { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'platform', { get: () => PLATFORM }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'languages', { get: () => LANGS }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'vendor', { get: () => VENDOR }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => HW }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'deviceMemory', { get: () => MEM }); } catch (e) {}
+
+    const mk = (name, filename, description, length) =>
+        ({ name, filename, description, length, item: () => null, namedItem: () => null });
+    const pluginArr = [
+        mk('Chrome PDF Plugin',  'internal-pdf-viewer',                'Portable Document Format', 1),
+        mk('Chrome PDF Viewer',  'mhjfbmdgcfjbbpaeojofohoefgiehjai',    '',                         1),
+        mk('Native Client',      'internal-nacl-plugin',                '',                         2)
+    ];
+    pluginArr.item      = (i) => pluginArr[i] || null;
+    pluginArr.namedItem = (n) => pluginArr.filter(p => p.name === n)[0] || null;
+    pluginArr.refresh   = () 

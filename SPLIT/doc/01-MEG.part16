@@ -1,0 +1,47 @@
+|---|---|---|---|---|---|")
+    for i, r in enumerate(clean, 1):
+        status_icon = "✅" if r["status"] == "ok" else "❌"
+        blocked = " ⚠️блок" if r.get("blocked_suspected") else ""
+        title = (r["title"] or "—").replace("|", "/")[:60]
+        file_link = f"[{r['file']}](./{r['file']})" if r["file"] else "—"
+        size = human_size(r["size_bytes"]) if r["size_bytes"] else "—"
+        words = r["word_count"] if r["word_count"] else "—"
+        lines.append(
+            f"| {i} | {title} | {r['url']} | {status_icon}{blocked} | {file_link} | {size} | {words} | {r['method']} |"
+        )
+        if r["status"] != "ok" and r.get("error"):
+            lines.append(f"|   | _ошибка:_ {str(r['error'])[:150]} |||||||")
+
+    with open(os.path.join(out_dir, "INDEX.md"), "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+
+# ==============================================================================
+# GUI
+# ==============================================================================
+class App:
+    def __init__(self, root):
+        self.root = root
+        self.ui_q = queue.Queue()
+        self.stop_event = threading.Event()
+        self.lock = threading.Lock()
+        self.is_running = False
+        self.last_output_dir = None
+
+        root.title(f"🚀 {APP_NAME} v{APP_VERSION}")
+        root.configure(bg="#12121f")
+        root.geometry("800x860")
+        root.minsize(760, 700)
+        root.resizable(False, True)
+        root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+        style = ttk.Style(root)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+        style.configure("TProgressbar", troughcolor="#1e1e1e", background="#00aa44", thickness=14)
+        style.configure("TCombobox", fieldbackground="#1e1e1e", background="#1e1e1e", foreground="white")
+
+        # --- Заголовок ---
+        header = tk.Frame(root

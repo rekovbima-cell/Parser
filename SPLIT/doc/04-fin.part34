@@ -1,0 +1,34 @@
+10), bg="#1a1a2e", fg="#888888").pack(pady=(0, 8))
+
+        # --- URL ---
+        tk.Label(root, text="📋 URL (по одному в строке):", font=("Segoe UI", 10, "bold"),
+                 anchor="w", bg="#12121f", fg="white").pack(fill="x", padx=20, pady=(12, 4))
+        self.urls = tk.Text(root, height=6, font=("Consolas", 10), bg="#1e1e1e", fg="#00ff88",
+                            insertbackground="#00ff88", wrap="none")
+        self.urls.pack(fill="both", expand=False, padx=20, pady=2)
+
+        # --- Настройки сбора ---
+        frame = tk.LabelFrame(root, text="⚙️ Настройки сбора", font=("Segoe UI", 10, "bold"),
+                              padx=10, pady=8, bg="#2d2d44", fg="white")
+        frame.pack(fill="x", padx=20, pady=(10, 6))
+
+        tk.Label(frame, text="Формат:", bg="#2d2d44", fg="white").grid(
+            row=0, column=0, sticky="w", padx=5, pady=3)
+        self.fmt_label = tk.StringVar(value="Markdown")
+        ttk.Combobox(frame, textvariable=self.fmtlabel, values=list(FORMATMAP.keys()),
+                     state="readonly", width=12).grid(row=0, column=1, sticky="w", padx=5, pady=3)
+
+        self.merge = tk.BooleanVar(value=True)
+        tk.Checkbutton(frame, text="Объединить в один файл", variable=self.merge,
+                       bg="#2d2d44", fg="white", selectcolor="#2d2d44").grid(
+            row=0, column=2, columnspan=2, padx=10, pady=3, sticky="w")
+
+        self.aggr = tk.BooleanVar(value=True)
+        tk.Checkbutton(frame, text="🔥 Агрессивный режим (КОРОЧЕ паузы и ожидания)",
+                       variable=self.aggr, bg="#2d2d44", fg="#00ff88",
+                       selectcolor="#2d2d44", font=("Segoe UI", 9, "bold")).grid(
+            row=1, column=0, columnspan=4, pady=(6, 3), sticky="w")
+
+        self.stealth = tk.BooleanVar(value=True)
+        tk.Checkbutton(frame, text="🥷 Stealth-скрипт (webdriver/plugins/WebGL) — "
+                     

@@ -1,0 +1,32 @@
+s-browsertype|5">
+                Постоянные контексты
+              </h3>
+            </div>
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Метод launchPersistentContext(userDataDir) запускает браузер, использующий постоянное хранилище в указанном каталоге userDataDir. Это идеально подходит для поддержания состояния между запусками.
+            </p>
+          </div>
+
+          <div class="card-interactive p-6 bg-primary-50/50 dark:bg-primary-900/20 rounded-xl shadow-md">
+            <div class="flex items-center space-x-4 mb-4">
+              <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="globe" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-primary-700 dark:text-primary-300" data-ref="https://www.neovasolutions.com/2024/06/13/automating-chrome-with-existing-profiles-using-playwright-and-typescript/|8">
+                Управление каналами
+              </h3>
+            </div>
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Метод launchPersistentContext поддерживает запуск различных каналов браузера путем установки опции канала. Документация предоставляет примеры для "chrome", "firefox" и "webkit".
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300">
+            Механизмы подключения к внешним браузерам
+          </h3>
+          
+          <div class="hs-accordion-group space-y-4">
+            <div class="hs-accordion card-interactive bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+              <button class="hs-accordion-toggle w-full flex justify-be

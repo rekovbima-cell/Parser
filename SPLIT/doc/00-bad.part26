@@ -1,0 +1,34 @@
+не удался.", "Для полноценного JS-рендеринга запустите PREVIEW_SERVER.py — тогда предпросмотр работает без публичных прокси."];
+  const body = "## Демо-контент\n\n" + paras.map((p,i) => "- Пункт " + (i+1) + ": " + p).join("\n");
+  const text = (state.fmt === "html" || state.fmt === "doc")
+    ? "<h1>" + escapeHtml(title) + "</h1><p><b>Source:</b> " + escapeHtml(url) + "</p><p>" + paras.map(escapeHtml).join("</p><p>") + "</p>"
+    : "# " + title + "\n\n**Source:** " + url + "\n\n" + body;
+  return { title:title, ext:ext, text:text };
+}
+
+/* ============================== состояние ============================== */
+const state = { running:false, stopReq:false, idx:0, urls:[], stamp:"", fmt:"md", ret:1, aggrOn:false, fallbackOn:true, results:[], t0:0, ok:0, fail:0, block:0, size:0, words:0, active:0, timer:null };
+
+function updStats(){
+  $("#sOk").textContent = String(state.ok);
+  $("#sFail").textContent = String(state.fail);
+  $("#sBlock").textContent = String(state.block);
+  $("#sSize").textContent = humanSize(state.size);
+  $("#sWords").textContent = String(state.words);
+  const done = state.ok + state.fail + state.block, total = state.urls.length || 0;
+  $("#mDone").textContent = String(done);
+  $("#mTotal").textContent = String(total);
+  $("#mThr").textContent = String(state.active);
+  const pct = total ? Math.round(done * 100 / total) : 0;
+  $("#pct").textContent = String(pct);
+  $("#barFill").style.width = pct + "%";
+  const elapsed = (performance.now() - state.t0) / 1000;
+  $("#mElapsed").textContent = elapsed.toFixed(1) + "s";
+  $("#mEta").textContent = (done && done < total) ? ((elapsed / done) * (total - done)).toFixed(0) + "s" : "—";
+  $("#resCount").textContent = state.results.length + " файлов";
+}
+
+function record(url, info){
+  // info: { status:"ok"|"fail"|"block", title, text, via, demo }
+  const n = state.results.length + 1;
+  let name = "—", size = 0, wo

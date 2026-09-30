@@ -1,0 +1,46 @@
+ogcb)
+                finally:
+                    if serial:
+                        PROFILE_LOCK.release()
+
+                if serial:
+                    PROFILE_LOCK.acquire()
+                try:
+                    page = session.new_page()
+                    result["engine"] = session.engine
+
+                    response = page.goto(url, wait_until="domcontentloaded",
+                                         timeout=goto_timeout)
+                    try:
+                        page.waitforloadstate("networkidle", timeout=nettimeout)
+                    except Exception:
+                        pass
+                    try:
+                        page.waitforload_state("load", timeout=4000)
+                    except Exception:
+                        pass
+
+                    page.waitfortimeout(random.randint(150, 350) if aggressive
+                                          else random.randint(400, 900))
+                    dismiss_overlays(page)
+                    autoscroll(page, steps=4 if aggressive else 6,
+                               pause_ms=200 if aggressive else 350)
+
+                    try:
+                        title = page.title()
+                    except Exception:
+                        title = ""
+                    result["title"] = title
+
+                    status_code = response.status if response else None
+                    body_sample = ""
+                    try:
+                        bodysample = page.locator('body').innertext(timeout=5000)[:2000]
+                    except Exception:
+                        pass
+
+                    blocked = (statuscode in (403, 429, 503)) or looksblocked(title, body_sample)
+                    result["blocked_suspected"] = blocked
+                    if blocked:
+                        logcb(f"   ⚠️ Похоже на блокировку (код {statuscode}), "
+                               f"попытка {at

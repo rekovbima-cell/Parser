@@ -1,0 +1,30 @@
+w", padx=5, pady=(8, 2))
+        tk.Button(browbtns, text="🔍 Проверить CDP-порт", command=self.testcdp,
+                  bg="#1e1e1e", fg="#5aa9ff", relief="flat", font=("Segoe UI", 9),
+                  cursor="hand2").pack(side="left", padx=(0, 6))
+        tk.Button(browbtns, text="🧪 Тест браузера", command=self.testbrowser,
+                  bg="#1e1e1e", fg="#00ff88", relief="flat", font=("Segoe UI", 9),
+                  cursor="hand2").pack(side="left", padx=(0, 6))
+        tk.Button(brow_btns, text="⬇️ Установить Firefox (Playwright)",
+                  command=lambda: self.installbg("firefox"),
+                  bg="#1e1e1e", fg="#ffb020", relief="flat", font=("Segoe UI", 9),
+                  cursor="hand2").pack(side="left", padx=(0, 6))
+        tk.Button(brow_btns, text="⬇️ Chromium",
+                  command=lambda: self.installbg("chromium"),
+                  bg="#1e1e1e", fg="#ffb020", relief="flat", font=("Segoe UI", 9),
+                  cursor="hand2").pack(side="left")
+
+        tk.Label(bframe, text="⚠️ Массовый скрапинг под личным профилем может привести "
+                              "к блокировке аккаунтов на целевых сайтах.\n"
+                              "⚠️ Профиль/CDP = ОДИН браузер на процесс: потоки будут "
+                              "сериализованы автоматически (иначе Chrome заблокирует "
+                              "user-data-dir).\n"
+                              "⚠️ Chrome 136+ игнорирует --remote-debugging-port для "
+                              "профиля по умолчанию — нужен отдельный --user-data-dir.",
+                 bg="#252540", fg="#9a9ab5", font=("Segoe UI", 8),
+                 justify="left").grid(row=8, column=0, columnspan=4, sticky="w",
+                                      padx=5, pady=(6, 0))
+
+        # --- Кнопки ---
+        btn_row = tk.Frame(root, bg="#12121f")
+        btn_row.pack(fill="x", padx=20, pady=8)

@@ -1,0 +1,44 @@
+          subprocess.Popen(["xdg-open", self.last_output_dir])
+        except Exception:
+            webbrowser.open(f"file://{self.last_output_dir}")
+
+    # ---------------- Координатор + воркеры ----------------
+    def _coordinator(self, urls, out_dir, settings):
+        url_q = queue.Queue()
+        for u in urls:
+            url_q.put(u)
+
+        manifest = []
+        counters = {"ok": 0, "fail": 0, "done": 0, "blocked": 0}
+        total = len(urls)
+
+        self.log("=" * 60)
+        self.log(f"🚀 {APP_NAME} v{APP_VERSION}  (build {BUILD_DATE})")
+        self.log(f"📁 Папка результата: {out_dir}")
+        self.log(f"📄 Формат: {settings['fmt'].upper()} | Объединить: "
+                 f"{'ДА' if settings['merge'] else 'НЕТ'}")
+        self.log(f"🌐 URLs: {total} | Потоков: {settings['concurrency']} | Повторов: "
+                 f"{settings['retries']} | Режим: "
+                 f"{'агрессивный' if settings['aggressive'] else 'щадящий'}")
+        self.log(f"🕸️ Браузер: {settings['external_browser']}")
+        if settings['custom_profile_path']:
+            self.log(f"📂 Профиль: {settings['custom_profile_path']}")
+        self.log("=" * 60)
+
+        def worker(worker_id):
+            while not self.stop_event.is_set():
+                try:
+                    url = url_q.get_nowait()
+                except queue.Empty:
+                    break
+                self.log(f"\n[поток {worker_id}] 📥 {url[:75]}")
+                res = scrape_one(url, settings["fmt"], out_dir, settings, self.log,
+                                 should_stop=self.stop_event.is_set,
+                                 browser_manager=self.browser_manager)
+                with self.lock:
+                    manifest.append(res)
+                    if res["status"] == "ok":
+                        counters["ok"] += 1
+                    else:
+                        counters["fail"] += 1
+        

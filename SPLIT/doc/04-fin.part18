@@ -1,0 +1,48 @@
+at} установлен")
+                return True
+            except Exception as e:
+                print(f"   ⚠️ playwright install {what} {' '.join(extra) or '(basic)'}: {e}")
+        return False
+
+    def run(self):
+        print("=" * 70)
+        print(f"🔍 {APPNAME} v{APPVERSION} — ПРОВЕРКА ЗАВИСИМОСТЕЙ")
+        print("=" * 70)
+        for pkg, imp in REQUIRED_PACKAGES:
+            ok = self.check(pkg, imp)
+            print(f"{'✅' if ok else '❌'} {pkg}")
+
+        if self.missing:
+            print("\n" + "=" * 70)
+            print(f"🚀 УСТАНАВЛИВАЮ {len(self.missing)} ПАКЕТ(ОВ)...")
+            print("=" * 70)
+            for p in list(self.missing):
+                if self.install(p):
+                    self.missing.remove(p)
+
+        if not self.chromium_ready():
+            print("\n" + "=" * 70)
+            print("🌐 БРАУЗЕР НЕ ГОТОВ — УСТАНАВЛИВАЮ CHROMIUM...")
+            print("=" * 70)
+            self.install_browsers("chromium")
+            if not self.chromium_ready():
+                print("   ℹ️ bundled Chromium недоступен → будут использованы "
+                      "системный Chrome/Edge (channel=...) или внешние браузеры.")
+                self.missing.append("chromium-browser")
+
+        print("\n" + "=" * 70)
+        if not self.missing:
+            print("✅ ВСЁ ГОТОВО! Запускаю интерфейс...")
+        else:
+            print(f"⚠️ Не установлено: {', '.join(self.missing)}")
+            print("   Повтори запуск или установи вручную:")
+            print(f"   {sys.executable} -m pip install " + " ".join(self.missing))
+        print("=" * 70)
+        return len(self.missing) == 0
+
+def installplaywrightbrowser(what, log_cb):
+    """Установка браузера Playwright из GUI (в отдельном потоке)."""
+    log_cb(f"🌐 playwright install {what} ...")
+    try:
+        subprocess.check_call([sys.executable, "-m", "playwright", "install", what],
+                        

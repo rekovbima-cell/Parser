@@ -1,0 +1,19 @@
+           <div class="pl-4 pr-3 py-3 border-l-4 border-primary-500 bg-primary-50/40 dark:bg-primary-900/30 rounded-r-lg">
+              <p class="text-sm font-medium text-primary-900 dark:text-primary-100 leading-relaxed" data-ref="https://developer.chrome.com/blog/remote-debugging-port|2">
+                <i data-lucide="shield-alert" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+                Критическое замечание: Начиная с Chrome версии 136, переключатели удаленной отладки больше не учитываются при использовании с каталогом данных пользователя по умолчанию из соображений безопасности.
+              </p>
+            </div>
+          </div>
+          
+          <img
+            src="https://cdn.qwenlm.ai/d09b27ad-8fe1-4a11-b761-510992da8aba/c7b08fbb-91b0-42dc-b1ab-a7ccc6af5d70/3138b544-1dd4-4587-912a-b3044e85719c.png?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZXNvdXJjZV91c2VyX2lkIjoiZDA5YjI3YWQtOGZlMS00YTExLWI3NjEtNTEwOTkyZGE4YWJhIiwicmVzb3VyY2VfaWQiOiJjN2IwOGZiYi05MWIwLTQyZGMtYjFhYi1hN2NjYzZhZjVkNzAiLCJyZXNvdXJjZV9jaGF0X2lkIjpudWxsfQ.ACcC9hBwmt66QaH1lbEA1I8QzbdsCHId1EnUUtgG7Zg"
+            alt="Концептуальная диаграмма архитектуры: слева - иконка Python скрипта с символом змеи цвета #1a73b3, справа - три портативных браузерных иконки (Firefox, Chrome, LibreWolf) расположены горизонтально на светло-сером фоне #f3f4f6. Между ними стрелки связи, указывающие на общий центральный серверный компонент с иконкой молнии #6366f1. Все элементы окружены тонкой рамкой #1a73b3. Текстовые метки на русском языке 'Обнаружение браузеров', 'Протокол удаленной отладки', 'Пользовательские профили' размещены под соответствующими элементами. Композиция симметричная, визуально сбалансированная."
+            class="w-full rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture Section -->
+ 

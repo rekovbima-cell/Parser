@@ -1,0 +1,38 @@
+xt", "md", "docx"):
+        if stop():
+            result["error"] = last_error
+        else:
+            try:
+                log_cb("   🔁 Пробую запасной метод (requests)...")
+                ua = random_ua()
+                locale, _tz = random_locale_tz()
+                raw_html, status_code = fetch_html(url, build_headers(ua, locale))
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(raw_html, "html.parser")
+                for tag in soup(["script", "style", "noscript", "template", "svg", "iframe",
+                                 "nav", "header", "footer", "aside"]):
+                    tag.decompose()
+                title = soup.title.get_text(strip=True) if soup.title else ""
+                result["title"] = title
+
+                sample = soup.get_text(" ", strip=True)[:2000]
+                blocked = (status_code in (403, 429, 503)) or looks_blocked(title, sample)
+                result["blocked_suspected"] = blocked
+                if blocked:
+                    raise RuntimeError(f"запасной метод получил страницу-заглушку (код {status_code})")
+
+                if fmt == "html":
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(raw_html)
+                elif fmt == "txt":
+                    text_content = soup.get_text("\n", strip=True)
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(text_content)
+                    result["word_count"] = len(text_content.split())
+                    result["_text"] = text_content
+                elif fmt == "md":
+                    absolutize(soup, url)
+                    md_text = html_to_markdown(str(soup), url)
+                    full_md = f"# {title or url}\n\nИсточник: {url}\n\n---\n\n" + md_text
+                    with open(file_path, 'w', encoding='utf-8') as f:
+      

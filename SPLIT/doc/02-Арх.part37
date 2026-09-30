@@ -1,0 +1,34 @@
+ше потоков = быстрее, но выше риск блокировки на одном домене",
+                 bg="#2d2d44", fg="#999999", font=("Segoe UI", 8)).grid(
+            row=5, column=0, columnspan=4, sticky="w", padx=5, pady=(4, 0))
+
+        # --- Кнопки управления ---
+        btn_row = tk.Frame(root, bg="#12121f")
+        btn_row.pack(fill="x", padx=20, pady=8)
+        self.btn = tk.Button(btn_row, text="🚀 НАЧАТЬ", command=self.start,
+                             bg="#00aa44", fg="white", font=("Segoe UI", 12, "bold"),
+                             relief="flat", cursor="hand2")
+        self.btn.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        self.stop_btn = tk.Button(btn_row, text="⛔ СТОП", command=self.stop, state="disabled",
+                                  bg="#aa2222", fg="white", font=("Segoe UI", 12, "bold"),
+                                  relief="flat", cursor="hand2")
+        self.stop_btn.pack(side="left", fill="x", expand=True, padx=(5, 0))
+
+        # --- Прогресс ---
+        self.progress = tk.DoubleVar()
+        ttk.Progressbar(root, variable=self.progress, maximum=100,
+                        style="TProgressbar").pack(fill="x", padx=20, pady=5)
+
+        # --- Журнал ---
+        log_head = tk.Frame(root, bg="#12121f")
+        log_head.pack(fill="x", padx=20, pady=(6, 0))
+        tk.Label(log_head, text="📋 Журнал", font=("Segoe UI", 9, "bold"),
+                 bg="#12121f", fg="#00ff88").pack(side="left")
+        tk.Button(log_head, text="скопировать", command=self.copy_log,
+                  bg="#2d2d44", fg="#cccccc", relief="flat", font=("Segoe UI", 8)).pack(
+            side="right", padx=(6, 0))
+        tk.Button(log_head, text="очистить", command=self.clear_log,
+                  bg="#2d2d44", fg="#cccccc", relief="flat", font=("Segoe UI", 8)).pack(side="right")
+
+        log_frame = tk.Frame(root, bg="#0d0d0d", highlightbackground="#1e1e1e",
+        

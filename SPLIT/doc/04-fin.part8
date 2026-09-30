@@ -1,0 +1,47 @@
+):
+        self.logcb = logcb or (lambda m: None)
+        self.discovered = []
+        self._lock = threading.Lock()
+        self.scan()
+
+    # ------------------------------------------------------------------ scan
+    def _expand(self, path):
+        return os.path.expandvars(os.path.expanduser(path))
+
+    def scanportable(self):
+        """Рекурсивный поиск портативных сборок рядом со скриптом и в PortableApps."""
+        found = {}
+        searchdirs = [BASEDIR]
+        parent = os.path.dirname(BASE_DIR)
+        for cand in (os.path.join(parent, "PortableApps"), parent,
+                     os.path.join(os.path.dirname(parent), "PortableApps")):
+            if os.path.isdir(cand) and cand not in search_dirs:
+                search_dirs.append(cand)
+
+        for base in search_dirs:
+            try:
+                walker = os.walk(base)
+            except Exception:
+                continue
+            for root, dirs, files in walker:
+                try:
+                    depth = root[len(base):].count(os.sep)
+                except Exception:
+                    depth = 99
+                if depth > 3:
+                    dirs[:] = []
+                    continue
+                dirs[:] = [d for d in dirs if d.lower() not in
+                           ("node_modules", ".git", "pycache", "windows", "system32")]
+                for name, cfg in self.PORTABLE_PATTERNS.items():
+                    if name in found:
+                        continue
+                    exe = next((e for e in cfg["exe_names"] if e in files), None)
+                    if not exe:
+                        continue
+                    exe_path = os.path.join(root, exe)
+                    profile_dir = ""
+                    for rel in cfg["default_profile"]:
+                        cand = os.path.join(root, *rel.split("/"))
+                        if os.path.isdir(cand):
+               

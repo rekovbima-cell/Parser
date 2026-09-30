@@ -1,0 +1,17 @@
+ria-labelledby="hs-profile-1">
+                  <div class="p-6 pt-0 space-y-4">
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://playwright.dev/docs/api/class-browsertype|5">
+                      Метод launchPersistentContext(userDataDir) запускает браузер, который использует постоянное хранилище, расположенное в указанном каталоге userDataDir. Этот каталог хранит данные сессии браузера, такие как cookies и локальное хранилище.
+                    </p>
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://playwright.dev/python/docs/auth|36">
+                      Playwright предоставляет метод browser_context.storage_state() для получения полного состояния аутентификации из существующего контекста браузера. Это состояние затем можно сохранить в файл с помощью параметра path (например, context.storage_state(path="state.json")).
+                    </p>
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://forum.cursor.com/t/add-persistent-browser-state-cookie-configuration-to-built-in-playwright-mcp-server/136489|18">
+                      API storageState в Playwright позволяет сериализовать и десериализовать состояние сессии браузера (cookies, localStorage). Скрипт может сохранить это состояние в файл с помощью context.storage_state(path='auth-state.json'), а другой скрипт может восстановить его, передав путь к storage_state при запуске нового контекста.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="hs-accordion card-interactive bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <button class="hs-accordion-toggle w-full flex justify-between items-center p-4 text-left hover:bg-primary-50 dark:hover:bg-gray-700/50 transition-colors rounde

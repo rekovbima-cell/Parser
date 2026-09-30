@@ -1,0 +1,52 @@
+        extra = []
+        for frame in frames[1:]:
+            try:
+                frame_text = frame.inner_text(timeout=8000)
+                if frame_text.strip():
+                    extra.append(f"\n[FRAME: {frame.url}]\n{frame_text}\n")
+            except Exception:
+                continue
+        if extra:
+            text_content += "\n--- СОДЕРЖИМОЕ ФРЕЙМОВ ---\n" + "\n".join(extra)
+    return text_content
+
+def extract_page_html(page):
+    js = """
+        () => {
+          const root = document.querySelector(__SEL__) || document.body || document.documentElement;
+          const copy = root.cloneNode(true);
+          copy.querySelectorAll(__JUNK__).forEach((node) => node.remove());
+          return copy.outerHTML;
+        }
+    """.replace("__SEL__", json.dumps(CONTENT_SELECTOR)).replace("__JUNK__", json.dumps(JUNK_SELECTOR))
+    try:
+        return page.evaluate(js)
+    except Exception:
+        return page.content()
+
+def html_to_markdown(html_content, page_url=""):
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html_content, "html.parser")
+    for tag in soup(["script", "style", "noscript", "template", "svg", "iframe",
+                     "nav", "header", "footer", "aside"]):
+        tag.decompose()
+    absolutize(soup, page_url)
+
+    try:
+        from markdownify import markdownify as md_convert
+        body = soup.body or soup
+        md = md_convert(str(body), heading_style="ATX", bullets="-")
+        md = re.sub(r'\n{3,}', '\n\n', md).strip()
+        if md:
+            return md
+    except Exception:
+        pass
+
+    lines = []
+    for el in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "a"]):
+        if el.name and re.match(r'h[1-6]', el.name):
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(f"{'#' * int(el.name[1])} {txt}")
+        elif el.name == "li":
+            txt = el.get

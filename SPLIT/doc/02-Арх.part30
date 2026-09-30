@@ -1,0 +1,48 @@
+writer = PdfWriter()
+    skipped = 0
+    for r in ok_results:
+        fp = os.path.join(out_dir, r["file"])
+        if not os.path.exists(fp):
+            skipped += 1
+            continue
+        try:
+            reader = PdfReader(fp)
+            if reader.is_encrypted:
+                try:
+                    reader.decrypt("")
+                except Exception:
+                    raise RuntimeError("зашифрован")
+            for page in reader.pages:
+                writer.add_page(page)
+        except Exception as e:
+            skipped += 1
+            log_cb(f"   ⚠️ пропущен повреждённый PDF: {r['file']} — {str(e)[:80]}")
+    if len(writer.pages) == 0:
+        raise RuntimeError("ни одного читаемого PDF для объединения")
+    writer.add_metadata({"/Title": f"{APP_NAME} Merged Export",
+                         "/Producer": f"{APP_NAME} v{APP_VERSION}"})
+    with open(out_path, "wb") as f:
+        writer.write(f)
+    writer.close()
+    if skipped:
+        log_cb(f"   ℹ️ в сводку не попали {skipped} файл(ов)")
+
+def merge_text_like(ok_results, out_path, fmt):
+    sep = "\n\n" + ("=" * 70) + "\n\n"
+    chunks = []
+    for r in ok_results:
+        header = f"ИСТОЧНИК: {r['url']}\nЗАГОЛОВОК: {r['title']}\n"
+        chunks.append(header + "\n" + r.get("_text", ""))
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(sep.join(chunks))
+
+def merge_markdown(ok_results, out_path):
+    toc = ["# Сводный документ\n", f"_Сгенерировано {APP_NAME} v{APP_VERSION}_\n", "\n## Содержание\n"]
+    body_parts = []
+    for r in ok_results:
+        anchor = slugify(r["title"] or r["url"])
+        toc.append(f"- [{r['title'] or r['url']}](#{anchor})")
+        text = re.sub(r'^#\s.*\n+', '', r.get("_text", ""), count=1)
+        body_parts.append(
+            f"\n\n<a name=\"{anchor}\"></a>\n\n## {r['title'] or r['url']}\n\n"
+            f"Источник: {r['url']}\n\n---\n\n{text

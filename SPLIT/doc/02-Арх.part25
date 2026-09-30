@@ -1,0 +1,41 @@
+ple = page.locator('body').inner_text(timeout=5000)[:2000]
+                except Exception:
+                    pass
+
+                blocked = (status_code in (403, 429, 503)) or looks_blocked(title, body_sample)
+                result["blocked_suspected"] = blocked
+                if blocked:
+                    log_cb(f"   ⚠️ Похоже на блокировку (код {status_code}), попытка {attempt}/{max_attempts}")
+
+                # ---------- сохранение по формату ----------
+                if fmt == "pdf":
+                    try:
+                        probe = page.evaluate(
+                            "() => (document.querySelector(%s) || document.body || {}).innerText || ''"
+                            % json.dumps(CONTENT_SELECTOR))
+                        result["word_count"] = len(str(probe).split()) or None
+                    except Exception:
+                        result["word_count"] = None
+
+                    pdf_ok = False
+                    try:
+                        try:
+                            page.emulate_media(media="screen")
+                        except Exception:
+                            pass
+                        page.pdf(
+                            path=file_path, format='A4', print_background=True,
+                            scale=1.0, timeout=60000,
+                            margin={'top': '0.5in', 'bottom': '0.5in', 'left': '0.5in', 'right': '0.5in'},
+                        )
+                        pdf_ok = True
+                    except Exception as ep:
+                        log_cb(f"   ⚠️ page.pdf не удался: {str(ep)[:110]}")
+
+                    if not pdf_ok:
+                        ct = ""
+                        try:
+                            ct = (response.headers.get("content-type") or "") if response else ""
+                        except Exception:
+                            pass
+                        if "pdf"

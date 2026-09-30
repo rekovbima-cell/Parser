@@ -1,0 +1,48 @@
+     + (f" → {', '.join(names)}" if names else ""))
+        return names
+
+    # ------------------------------------------------------------------ lists
+    def getbrowserlist(self):
+        with self._lock:
+            names = [b["name"] for b in self.discovered]
+        return [SYSTEM_BROWSER] + names
+
+    def find(self, name):
+        with self._lock:
+            return next((b for b in self.discovered if b["name"] == name), None)
+
+    # -------------------------------------------------------------------- cdp
+    @staticmethod
+    def probe_cdp(port, timeout=1.5):
+        """Живой CDP-эндпоинт на 127.0.0.1:. Возвращает ws-URL или None."""
+        try:
+            import requests
+            r = requests.get(f"http://127.0.0.1:{int(port)}/json/version", timeout=timeout)
+            if r.status_code == 200:
+                data = r.json()
+                ws = data.get("webSocketDebuggerUrl")
+                if ws:
+                    return ws, data.get("Browser", "?")
+        except Exception:
+            pass
+        return None, None
+
+    # ------------------------------------------------------------------ plan
+    def buildplan(self, browsername, profilepath="", useprofile=False,
+                   attachcdp=False, cdpport=9222, headless=True,
+                   copyprofile=False, logcb=None):
+        """Собирает план запуска. Ничего не запускает — только данные."""
+        cb = logcb or self.logcb
+        plan = {
+            "mode": "bundled",          # bundled | persistent | cdp | executable
+            "engine": "chromium",
+            "channel": None,
+            "executable_path": None,
+            "args": [],
+            "userdatadir": None,
+            "cdp_url": None,
+            "owns_browser": True,
+            "owns_context": True,
+            "label": SYSTEM_BROWSER,
+            "profileiscopy": False,
+            "serial": False,            # сериа

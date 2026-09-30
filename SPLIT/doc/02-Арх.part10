@@ -1,0 +1,43 @@
+      "Chromium Portable": {
+            "exe_names": ["chrome.exe", "chromium.exe"],
+            "paths": ["ChromiumPortable"],
+            "engine": "chromium",
+            "profile_arg": "--user-data-dir",
+            "default_profile": "Data/profile"
+        }
+    }
+
+    def __init__(self, log_cb=None):
+        self.log_cb = log_cb or print
+        self.discovered_browsers = []
+        self._scan_for_browsers()
+
+    def _scan_for_browsers(self):
+        """Сканирует текущую директорию и стандартные пути на наличие портативных браузеров."""
+        search_dirs = [BASE_DIR]
+        # Добавляем типичную папку PortableApps, если она существует рядом
+        parent_dir = os.path.dirname(BASE_DIR)
+        portable_apps_dir = os.path.join(parent_dir, "PortableApps")
+        if os.path.isdir(portable_apps_dir):
+            search_dirs.append(portable_apps_dir)
+        
+        found = {}
+        for dir_path in search_dirs:
+            for root, dirs, files in os.walk(dir_path):
+                # Ограничиваем глубину поиска для скорости
+                depth = root[len(dir_path):].count(os.sep)
+                if depth > 3:
+                    dirs.clear()
+                    continue
+                
+                for name, config in self.PORTABLE_PATTERNS.items():
+                    if name in found:
+                        continue
+                    for exe in config["exe_names"]:
+                        if exe in files:
+                            exe_path = os.path.join(root, exe)
+                            # Проверяем, что это действительно портативная версия (наличие папки Data или App)
+                            profile_path = os.path.join(root, config["default_profile"])
+                            if not os.path.exists(profile_path):
+                                # Ищем профиль в родительских папках или соседних
+                                for p in 

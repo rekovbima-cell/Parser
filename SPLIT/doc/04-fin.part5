@@ -1,0 +1,50 @@
+function (parameter) {
+                if (parameter === 37445) return 'Intel Inc.';
+                if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+                return orig.call(this, parameter);
+            };
+        };
+        patch(window.WebGLRenderingContext && WebGLRenderingContext.prototype);
+        patch(window.WebGL2RenderingContext && WebGL2RenderingContext.prototype);
+    } catch (e) {}
+})();
+"""
+
+DISMISS_JS = r"""
+() => {
+    const words = ['accept all', 'accept', 'agree', 'i agree', 'got it', 'okay', 'ok',
+                   'reject all', 'no thanks', 'close', 'dismiss',
+                   'принять все', 'принять', 'согласен', 'согласна', 'понятно',
+                   'закрыть', 'отклонить'];
+    const nodes = Array.from(document.querySelectorAll(
+        'button, input[type="button"], input[type="submit"], [role="button"]'));
+    let clicked = 0;
+    for (const n of nodes) {
+        const t = ((n.innerText || n.value || n.getAttribute('aria-label') || '') + '').trim().toLowerCase();
+        if (!t || t.length > 40) continue;
+        if (words.some(w => t === w || t.indexOf(w) === 0)) {
+            try {
+                const r = n.getBoundingClientRect();
+                if (r.width > 0 && r.height > 0) { n.click(); clicked++; }
+            } catch (e) {}
+            if (clicked >= 2) break;
+        }
+    }
+    return clicked;
+}
+"""
+
+Минимальный «человеческий» набор prefs для Gecko
+GECKO_PREFS = {
+    "dom.webdriver.enabled": False,
+    "general.useragent.override": "",
+    "privacy.resistFingerprinting": False,
+    "toolkit.telemetry.reportingpolicy.firstRun": False,
+    "datareporting.policy.firstRunURL": "",
+    "browser.startup.homepage_override.mstone": "ignore",
+    "browser.shell.checkDefaultBrowser": False,
+}
+
+==============================================================================
+МЕНЕДЖЕР ВНЕШНИХ БРАУЗЕРОВ
+==============

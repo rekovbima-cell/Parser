@@ -1,0 +1,56 @@
+dom_locale_tz():
+    return random.choice(LOCALE_TZ_PAIRS)
+
+def random_ua():
+    return random.choice(USER_AGENTS)
+
+def platform_for_ua(ua):
+    if "Macintosh" in ua:
+        return "MacIntel", "macOS"
+    if "X11; Linux" in ua:
+        return "Linux x86_64", "Linux"
+    return "Win32", "Windows"
+
+def langs_for(locale):
+    return [locale, "en"] if locale != "en-US" else ["en-US", "en"]
+
+def accept_language_for(locale):
+    return f"{locale},en;q=0.9"
+
+def build_headers(ua, locale="en-US"):
+    _, plat = platform_for_ua(ua)
+    version = "148" if "148." in ua else "147"
+    return {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": accept_language_for(locale),
+        "Sec-CH-UA": f'"Google Chrome";v="{version}", "Chromium";v="{version}", "Not_A Brand";v="8"',
+        "Sec-CH-UA-Mobile": "?0",
+        "Sec-CH-UA-Platform": f'"{plat}"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
+        "User-Agent": ua,
+    }
+
+def build_stealth_script(ua, locale):
+    plat, _ = platform_for_ua(ua)
+    hw, mem = random.choice(HARDWARE_PROFILES)
+    return (STEALTH_TEMPLATE
+            .replace("__LANGS__", json.dumps(langs_for(locale)))
+            .replace("__PLATFORM__", json.dumps(plat))
+            .replace("__HW__", str(hw))
+            .replace("__MEM__", str(mem)))
+
+def looks_blocked(title, body_sample):
+    haystack = f"{title} {body_sample}".lower()
+    return any(marker in haystack for marker in BLOCKED_MARKERS)
+
+def autoscroll(page, steps=6, pause_ms=350):
+    try:
+        for _ in range(steps):
+            page.mouse.wheel(0, random.randint(500, 900))
+            page.wait_for_timeout(pause_ms)
+        page.wait_for_timeout(15

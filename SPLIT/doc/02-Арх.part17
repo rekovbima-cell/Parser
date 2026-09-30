@@ -1,0 +1,57 @@
+
+            print(f"⚠️ Не установлено: {', '.join(self.missing)}")
+            print(f"   {sys.executable} -m pip install " + " ".join(self.missing))
+        print("=" * 70)
+        return len(self.missing) == 0
+
+
+# ==============================================================================
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# ==============================================================================
+def sanitize(name):
+    name = re.sub(r'^https?://', '', name)
+    name = re.sub(r'[^\w\-_.]', '_', name)
+    name = name.strip('_')
+    while "__" in name:
+        name = name.replace("__", "_")
+    return (name or "page")[:80]
+
+def slugify(text):
+    text = re.sub(r'[^\w\-]+', '-', str(text).strip().lower())
+    return re.sub(r'-+', '-', text).strip('-')[:60] or "source"
+
+def human_size(num_bytes):
+    num_bytes = float(num_bytes or 0)
+    for unit in ("Б", "КБ", "МБ", "ГБ"):
+        if num_bytes < 1024:
+            return f"{int(num_bytes)} {unit}" if unit == "Б" else f"{num_bytes:.1f} {unit}"
+        num_bytes /= 1024
+    return f"{num_bytes:.1f} ТБ"
+
+def now_stamp():
+    return datetime.now().strftime("%Y-%m-%d_%H%M%S")
+
+def safe_xml_text(s):
+    return re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', str(s or ''))
+
+def reserve_path(out_dir, safe_name, fmt):
+    with PATH_LOCK:
+        candidate = os.path.join(out_dir, f"{safe_name}.{fmt}")
+        i = 2
+        while candidate in RESERVED_PATHS or os.path.exists(candidate):
+            candidate = os.path.join(out_dir, f"{safe_name}_{i}.{fmt}")
+            i += 1
+        RESERVED_PATHS.add(candidate)
+        return candidate
+
+def quick_dns_check(url):
+    try:
+        host = urlparse(url).hostname
+        if not host:
+            return False, "Не удалось разобрать URL"
+        socket.getaddrinfo(host, None)
+        return True, None
+    except Exception as e:
+        return False, f"DNS/сеть недоступны: {e}"
+
+def ran

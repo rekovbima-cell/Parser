@@ -1,0 +1,43 @@
+log("=" * 60)
+        self.log(f"🚀 {APP_NAME} v{APP_VERSION}")
+        self.log(f"📁 Папка результата: {out_dir}")
+        self.log(f"📄 Формат: {settings['fmt'].upper()} | Объединить: {'ДА' if settings['merge'] else 'НЕТ'}")
+        self.log(f"🌐 URLs: {total} | Потоков: {settings['concurrency']} | Повторов: {settings['retries']}")
+        self.log("=" * 60)
+
+        def worker(worker_id):
+            while not self.stop_event.is_set():
+                try:
+                    url = url_q.get_nowait()
+                except queue.Empty:
+                    break
+                self.log(f"\n[поток {worker_id}] 📥 {url[:75]}")
+                res = scrape_one(url, settings["fmt"], out_dir, settings, self.log)
+                with self.lock:
+                    manifest.append(res)
+                    if res["status"] == "ok":
+                        counters["ok"] += 1
+                    else:
+                        counters["fail"] += 1
+                        self.log(f"   ❌ Не удалось: {url} — {str(res.get('error'))[:150]}")
+                    counters["done"] += 1
+                    self.set_stats(counters["ok"], counters["fail"])
+                    self.set_progress(counters["done"] / total * 100)
+
+                if self.stop_event.is_set():
+                    break
+                delay = random.uniform(8.0, 15.0) if settings["aggressive"] else random.uniform(3.0, 7.0)
+                self.log(f"   ⏱️ [поток {worker_id}] пауза {delay:.1f} сек")
+                slept = 0.0
+                while slept < delay and not self.stop_event.is_set():
+                    time.sleep(0.25)
+                    slept += 0.25
+
+        threads = [threading.Thread(target=worker, args=(i + 1,), daemon=True)
+                   for i in range(settings["concurrency"])]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # сортиру

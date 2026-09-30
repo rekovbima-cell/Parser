@@ -1,0 +1,59 @@
+  frames = page.frames
+    except Exception:
+        frames = []
+    if len(frames) > 1:
+        extra = []
+        for frame in frames[1:]:
+            try:
+                ft = frame.inner_text(timeout=8000)
+                if ft.strip():
+                    extra.append(f"\n[FRAME: {frame.url}]\n{ft}\n")
+            except Exception:
+                continue
+        if extra:
+            text_content += "\n--- СОДЕРЖИМОЕ ФРЕЙМОВ ---\n" + "\n".join(extra)
+    return text_content
+
+def extractpagehtml(page):
+    try:
+        return page.evaluate(js(JSEXTRACT_HTML))
+    except Exception:
+        return page.content()
+
+def htmltomarkdown(htmlcontent, pageurl=""):
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html_content, "html.parser")
+    for tag in soup(["script", "style", "noscript", "template", "svg", "iframe",
+                     "nav", "header", "footer", "aside"]):
+        tag.decompose()
+    absolutize(soup, page_url)
+
+    try:
+        from markdownify import markdownify as md_convert
+        body = soup.body or soup
+        md = mdconvert(str(body), headingstyle="ATX", bullets="-")
+        md = re.sub(r'\n{3,}', '\n\n', md).strip()
+        if md:
+            return md
+    except Exception:
+        pass
+
+    lines = []
+    for el in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li"]):
+        if el.name and re.match(r'h[1-6]', el.name):
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(f"{'#' * int(el.name[1])} {txt}")
+        elif el.name == "li":
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(f"- {txt}")
+        elif el.name == "p":
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(txt)
+    return "\n\n".join(lines) if lines else soup.get_text("\n", strip=True)
+
+def fetch_html(url, headers):
+    """charset из 

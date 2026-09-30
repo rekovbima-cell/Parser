@@ -1,0 +1,28 @@
+                Ключевое преимущество: Встроенный менеджер профилей Firefox (-P) не работает с портативными версиями, поэтому пользователи создают пользовательские скрипты для модификации файла FirefoxPortable.ini.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CDP Protocol Section -->
+    <section id="cdp" class="py-20 bg-primary-50/50 dark:bg-gray-800" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-primary-700 dark:text-primary-300">
+          Протокол удаленной отладки (CDP)
+        </h2>
+
+        <div class="grid md:grid-cols-2 gap-8 items-start mb-12">
+          <div class="space-y-6">
+            <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300" data-ref="https://www.browserless.io/blog/chrome-remote-debugging|1">
+              Основы Chrome DevTools Protocol
+            </h3>
+            <p class="text-gray-700 dark:text-gray-300">
+              Для автоматизации целей, когда видимое окно браузера не нужно, флаг --headless должен быть добавлен к команде запуска Chrome при использовании удаленной отладки. Raw данные целей из экземпляра Chrome с включенной отладкой можно получить через JSON-конечные точки.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300">
+              Список всех отладочных вкладок доступен по адресу <span class="mx-1 px-1.5 py-0.5 rounded-md bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 font-semibold text-sm">http://localhost:9222/json</span>, в то время как URL-адрес отладчика WebSocket на уровне браузера находится по адресу <span class="mx-1 px-1.5 py-0.5 rounded-md bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 font-semibold text-sm">/jso

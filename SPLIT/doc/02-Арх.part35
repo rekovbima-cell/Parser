@@ -1,0 +1,35 @@
+88",
+                            insertbackground="#00ff88", wrap="none")
+        self.urls.pack(fill="both", expand=False, padx=20, pady=2)
+
+        # --- Настройки ---
+        frame = tk.LabelFrame(root, text="⚙️ Настройки", font=("Segoe UI", 10, "bold"),
+                              padx=10, pady=8, bg="#2d2d44", fg="white")
+        frame.pack(fill="x", padx=20, pady=10)
+
+        tk.Label(frame, text="Формат:", bg="#2d2d44", fg="white").grid(
+            row=0, column=0, sticky="w", padx=5, pady=3)
+        self.fmt_label = tk.StringVar(value="PDF")
+        ttk.Combobox(frame, textvariable=self.fmt_label, values=list(FORMAT_MAP.keys()),
+                     state="readonly", width=10).grid(row=0, column=1, sticky="w", padx=5, pady=3)
+
+        self.merge = tk.BooleanVar(value=True)
+        tk.Checkbutton(frame, text="Объединить в один файл", variable=self.merge,
+                       bg="#2d2d44", fg="white", selectcolor="#2d2d44").grid(
+            row=0, column=2, columnspan=2, padx=10, pady=3, sticky="w")
+
+        self.aggr = tk.BooleanVar(value=True)
+        tk.Checkbutton(frame, text="🔥 Агрессивный режим (КОРОЧЕ паузы и ожидания)",
+                       variable=self.aggr, bg="#2d2d44", fg="#00ff88",
+                       selectcolor="#2d2d44", font=("Segoe UI", 9, "bold")).grid(
+            row=1, column=0, columnspan=4, pady=(8, 3), sticky="w")
+
+        tk.Label(frame, text="Потоков параллельно:", bg="#2d2d44", fg="white").grid(
+            row=2, column=0, sticky="w", padx=5, pady=3)
+        self.concurrency = tk.IntVar(value=1)
+        tk.Spinbox(frame, from_=1, to=5, textvariable=self.concurrency, width=5,
+                   bg="#1e1e1e", fg="#00ff88", insertbackground="#00ff88",
+                   buttonbackground="#1e1e1e", relief="flat").grid(
+            row=2, column=1, sticky="w", padx=5, pady=3)
+
+        tk.Label(frame, text="Повторов при ошибке:

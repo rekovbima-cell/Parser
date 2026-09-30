@@ -1,0 +1,38 @@
+:scope > ol"));
+          nested.forEach(n=>n.remove());
+          const v = inlineMd(li,base).trim().replace(/\n+/g," ");
+          if(v) out.push((t === "ol" ? `${i+1}. ` : "- ") + v);
+          nested.forEach(n=>{
+            const sub = []; const w2 = node => node.childNodes.forEach(c=>{ if(c.nodeType===1 && c.tagName.toLowerCase()==="li"){ const v=inlineMd(c,base).trim(); if(v) sub.push("  - "+v); } });
+            w2(n); if(sub.length) out.push(sub.join("\n"));
+          });
+        });
+      } else if(t === "pre"){
+        const code = ch.textContent.replace(/\n+$/,"");
+        if(code.trim()) out.push("```" + code + "```");
+      } else if(t === "table"){
+        const md = tableToMd(ch); if(md) out.push(md);
+      } else if(t === "blockquote"){
+        const v = htmlToMarkdown(ch, base).trim();
+        if(v) out.push(v.split("\n").map(l => "> " + l).join("\n"));
+      } else if(t === "hr"){
+        out.push("---");
+      } else if(BLOCK_TAGS.has(ch.tagName)){
+        const v = htmlToMarkdown(ch, base).trim(); if(v) out.push(v);
+      } else {
+        const v = inlineMd(ch, base).trim(); if(v) out.push(v);
+      }
+    });
+  };
+  walk(root);
+  return out.join("\n");
+}
+
+/* ======================= ВОССТАНОВЛЕННАЯ ЧАСТЬ (репо-копия была обрезана) ======================= */
+
+const MIME = { html:"text/html;charset=utf-8", txt:"text/plain;charset=utf-8", md:"text/markdown;charset=utf-8", doc:"application/msword", pdf:"application/pdf" };
+const RENDER_SERVER = { id:"render-server", label:"render-server", build:u => "http://127.0.0.1:8765/render?url=" + encodeURIComponent(u), json:false, local:true };
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=ri(0,i); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function normalizeUrl(u){ u=String(u||"").trim(); if(/^https?:\/\//i.test(u)) return u; if(u.startsWith("//")) return "https:"+u; return "https://"+u; }
+function f

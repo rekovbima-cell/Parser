@@ -1,0 +1,37 @@
+======= экспорт пакета ============================== */
+function fileRows(){ return state.results.filter(r => r.text || r.blob); }
+function manifestObj(){
+  return {
+    app: APP_NAME + " " + APP_VERSION, build: BUILD_DATE, generated: isoNow(),
+    params: { format: state.fmt, concurrency: +$("#conc").value, retries: state.ret, aggressive: state.aggrOn, fallback: state.fallbackOn },
+    files: fileRows().map(r => ({ url: r.url, file: r.name, title: r.title, method: r.via, words: r.words, size: r.size }))
+  };
+}
+function indexMd(){
+  const rows = fileRows().map((r, i) => "| " + (i + 1) + " | " + escapeHtml(r.title.slice(0, 60)) + " | `" + r.name + "` | " + r.via + " |");
+  return "# INDEX — MEGA_TANK_" + state.stamp + "\n\n| # | Заголовок | Файл | Метод |\n|---|---|---|---|\n" + rows.join("\n") + "\n";
+}
+
+function downloadMerged(){
+  const rs = fileRows();
+  if(!rs.length) return;
+  const ext = fmtExt(state.fmt);
+  let merged = "";
+  if($("#merge").checked && state.fmt !== "html" && state.fmt !== "doc" && state.fmt !== "pdf"){
+    merged += "# MEGA_TANK_" + state.stamp + " · " + rs.length + " файлов\n\n";
+    rs.forEach((r, i) => merged += "- " + (i + 1) + ". " + r.title + " — `" + r.name + "`\n");
+    merged += "\n---\n\n";
+  }
+  const sep = (state.fmt === "html" || state.fmt === "doc") ? "\n<hr>\n" : "\n\n\n";
+  rs.forEach((r, i) => { merged += (i ? sep : "") + (r.blob ? "" : r.text); });
+  download("MEGA_FULL_" + state.stamp + "." + ext, merged, MIME[state.fmt]);
+  toast("Скачан merged", "MEGA_FULL_" + state.stamp + "." + ext);
+}
+
+function downloadZip(){
+  const rs = fileRows();
+  if(!rs.length) return;
+  if(!window.JSZip){ toast("ZIP недоступен", "нет библиотеки JSZip (CDN?) — используйте merged", "warn"); return downloadMerged(); }
+  const zip = new JSZip();
+  rs.forEach(r => { if(!r.blob) zip.file(r.name, r.text); });
+  zip.file("manifest.json", JSON.stringify(m

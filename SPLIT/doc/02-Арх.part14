@@ -1,0 +1,43 @@
+=> {};
+    try { Object.defineProperty(navigator, 'plugins', { get: () => pluginArr }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'mimeTypes', { get: () => [] }); } catch (e) {}
+
+    window.chrome = window.chrome || { runtime: {}, loadTimes: () => ({}), csi: () => ({}) };
+
+    try {
+        const origQuery = window.navigator.permissions && window.navigator.permissions.query;
+        if (origQuery) {
+            window.navigator.permissions.query = (parameters) => (
+                parameters && parameters.name === 'notifications'
+                    ? Promise.resolve({ state: (typeof Notification !== 'undefined' && Notification.permission) || 'granted' })
+                    : origQuery(parameters)
+            );
+        }
+    } catch (e) {}
+
+    try {
+        const patch = (proto) => {
+            if (!proto) return;
+            const orig = proto.getParameter;
+            proto.getParameter = function (parameter) {
+                if (parameter === 37445) return 'Intel Inc.';
+                if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+                return orig.call(this, parameter);
+            };
+        };
+        patch(window.WebGLRenderingContext && WebGLRenderingContext.prototype);
+        patch(window.WebGL2RenderingContext && WebGL2RenderingContext.prototype);
+    } catch (e) {}
+})();
+"""
+
+DISMISS_JS = r"""
+() => {
+    const words = ['accept all', 'accept', 'agree', 'i agree', 'got it', 'okay', 'ok',
+                   'reject all', 'no thanks', 'close', 'dismiss',
+                   'принять все', 'принять', 'согласен', 'согласна', 'понятно', 'закрыть', 'отклонить'];
+    const nodes = Array.from(document.querySelectorAll(
+        'button, input[type="button"], input[type="submit"], [role="button"]'));
+    let clicked = 0;
+    for (const n of nodes) {
+        const t = ((n.innerText || n.value || n.getAttribute('aria-label') 

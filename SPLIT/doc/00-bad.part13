@@ -1,0 +1,40 @@
+     <option value="md" selected>Markdown — контекст для ИИ</option>
+            </select>
+            <div class="hint">Объединение работает для любого формата</div>
+          </div>
+
+          <div class="grid2">
+            <div class="field">
+              <div class="range-head"><label style="margin:0">Потоков</label><span class="range-val" id="concVal">2</span></div>
+              <input type="range" id="conc" min="1" max="5" step="1" value="2">
+              <div class="hint">больше = быстрее, но выше риск блока</div>
+            </div>
+            <div class="field">
+              <div class="range-head"><label style="margin:0">Повторов</label><span class="range-val" id="retVal">1</span></div>
+              <input type="range" id="ret" min="0" max="3" step="1" value="1">
+              <div class="hint">с ротацией узла и fingerprint'а</div>
+            </div>
+          </div>
+
+          <label class="switch on" id="swMerge">
+            <input type="checkbox" id="merge" checked>
+            <span class="track"></span>
+            <span><span class="lbl">Объединить в один файл</span><br><span class="sub">MEGA_FULL.&lt;fmt&gt; + TOC</span></span>
+          </label>
+
+          <label class="switch" id="swAggr">
+            <input type="checkbox" id="aggr">
+            <span class="track"></span>
+            <span><span class="lbl">🔥 Агрессивный режим</span><br><span class="sub">короткие паузы между запросами</span></span>
+          </label>
+
+          <label class="switch on" id="swFallback">
+            <input type="checkbox" id="fallback" checked>
+            <span class="track"></span>
+            <span><span class="lbl">🔁 Fallback-узлы</span><br><span class="sub">requests-аналог: запасные прокси</span></span>
+          </label>
+
+          <label class="switch" id="swDemo">
+            <input type="checkbox" id="demo">
+            <span class="track"></span>
+  

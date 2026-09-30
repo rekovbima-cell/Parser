@@ -1,0 +1,34 @@
+ext-amber-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Файлы состояния аутентификации содержат конфиденциальную информацию и не должны фиксироваться</span>
+                </li>
+                <li class="flex items-start space-x-3">
+                  <i data-lucide="triangle-alert" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+                  <span class="text-gray-700 dark:text-gray-300 text-sm">Playwright только с встроенными браузерами, использование внешних исполняемых файлов на ваш страх и риск</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="pl-4 pr-3 py-3 border-l-4 border-primary-500 bg-primary-50/40 dark:bg-primary-900/30 rounded-r-lg">
+            <p class="text-sm font-medium text-primary-900 dark:text-primary-100 leading-relaxed" data-ref="https://playwright.dev/docs/api/class-browsertype|5">
+              <i data-lucide="info" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+              Ключевой вывод: Для запуска внешнего исполняемого файла браузера методы launch() и launchServer() Playwright принимают опцию executablePath. Однако документация явно предупреждает: "Обратите внимание, что Playwright работает только с встроенными Chromium, Firefox или WebKit, используйте на свой страх и риск."
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-primary-700 dark:bg-gray-950 text-white py-8">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <p class="text-sm opacity-80">
+        © 2024 MEGA TANK v3.0. Исследование архитектуры интеграции внешних браузеров. Все права защищены.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Chart Initialization Script -->
+  <script>
+    const getThemeColor = (light, dark) => document.body.classList.c

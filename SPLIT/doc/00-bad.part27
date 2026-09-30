@@ -1,0 +1,32 @@
+rds = 0, mime = MIME[state.fmt] || "text/plain";
+  if(info.status === "ok" && info.text){
+    name = sanitize(url) + "." + info.ext;
+    words = String(info.text).split(/\s+/).filter(Boolean).length;
+    if(state.fmt === "pdf"){
+      const blob = makePdfBlob(info.title || url, url, info.text);
+      if(blob){ info.blob = blob; size = blob.size; }
+      else { name = sanitize(url) + ".txt"; info.pdfFallback = true; }
+    }
+    if(!size) size = blobSize(info.text);
+    state.size += size; state.words += words;
+    state.results.push({ url:url, n:n, title:info.title || url, name:name, text:info.blob ? "" : info.text, blob:info.blob || null, via:info.via || (info.demo ? "demo" : "?"), status:info.status, words:words, size:size });
+  } else {
+    state.results.push({ url:url, n:n, title:info.title || url, name:name, text:"", blob:null, via:info.via || "", status:info.status, words:0, size:0 });
+  }
+  if(info.status === "ok") state.ok++; else if(info.status === "block") state.block++; else state.fail++;
+  addRow(state.results[state.results.length - 1]);
+  updStats();
+}
+
+function addRow(r){
+  const tr = document.createElement("tr");
+  const st = r.status === "ok" ? '<b class="st-ok">ok' + (r.via === "demo" ? " · demo" : "") + '</b>' : (r.status === "block" ? '<b class="st-block">блок</b>' : '<b class="st-fail">ошибка</b>');
+  const via = r.via ? escapeHtml(r.via) : "—";
+  tr.innerHTML = "<td>" + r.n + "</td>"
+    + "<td><b>" + escapeHtml((r.title || r.url).slice(0, 90)) + "</b><br><span style=\"opacity:.55;font-size:11px;word-break:break-all\">" + escapeHtml(r.url.slice(0, 110)) + "</span></td>"
+    + "<td>" + st + "</td>"
+    + "<td style=\"word-break:break-all\">" + escapeHtml(r.name) + (r.blob ? " 📄" : "") + "</td>"
+    + "<td>" + humanSize(r.size) + "</td>"
+    + "<td>" + (r.words || "—") + "</td>"
+    + "<td style=\"font-size:11px\">" + via + "</td>"
+    + "<td></td>";

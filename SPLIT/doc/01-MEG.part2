@@ -1,0 +1,56 @@
+
+LOCALE_TZ_PAIRS = [
+    ("en-US", "America/New_York"),
+    ("en-US", "America/Los_Angeles"),
+    ("en-US", "America/Chicago"),
+    ("en-GB", "Europe/London"),
+]
+
+VIEWPORTS = [
+    {"width": 1920, "height": 1080},
+    {"width": 1536, "height": 864},
+    {"width": 1440, "height": 900},
+    {"width": 1366, "height": 768},
+]
+
+STEALTH_INIT_SCRIPT = """
+(() => {
+    // Скрыть navigator.webdriver
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+
+    // Подделать plugins / mimeTypes (headless Chromium их не имеет)
+    Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5].map(() => ({ name: 'Chrome PDF Plugin' })),
+    });
+    Object.defineProperty(navigator, 'languages', {
+        get: () => ['en-US', 'en'],
+    });
+
+    // window.chrome — у настоящего Chrome он есть, у headless часто отсутствует
+    window.chrome = window.chrome || { runtime: {} };
+
+    // Подделать permissions.query, чтобы не выдавать автоматизацию
+    const origQuery = window.navigator.permissions && window.navigator.permissions.query;
+    if (origQuery) {
+        window.navigator.permissions.query = (parameters) => (
+            parameters && parameters.name === 'notifications'
+                ? Promise.resolve({ state: Notification.permission })
+                : origQuery(parameters)
+        );
+    }
+
+    // Лёгкая маскировка WebGL vendor/renderer
+    try {
+        const getParameter = WebGLRenderingContext.prototype.getParameter;
+        WebGLRenderingContext.prototype.getParameter = function (parameter) {
+            if (parameter === 37445) return 'Intel Inc.';
+            if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+            return getParameter.call(this, parameter);
+        };
+    } catch (e) {}
+})();
+"""
+
+# ==============================================================================
+# АВТОУСТАНОВКА ЗАВИСИМОСТЕЙ
+# =========

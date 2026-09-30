@@ -1,0 +1,34 @@
+                     highlightthickness=1)
+        log_frame.pack(fill="both", expand=True, padx=20, pady=(4, 5))
+        self.log_text = tk.Text(log_frame, height=12, state="disabled",
+                                bg="#0d0d0d", fg="#00ff88", font=("Consolas", 9),
+                                relief="flat", padx=6, pady=4)
+        sb = ttk.Scrollbar(log_frame, orient="vertical", command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=sb.set)
+        self.log_text.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+
+        # --- Статистика + папка ---
+        stats = tk.Frame(root, bg="#12121f")
+        stats.pack(fill="x", padx=20, pady=(2, 12))
+        self.ok_label = tk.Label(stats, text="✅ 0", font=("Segoe UI", 10, "bold"),
+                                 fg="#00ff88", bg="#12121f")
+        self.ok_label.pack(side="left", padx=(0, 20))
+        self.fail_label = tk.Label(stats, text="❌ 0", font=("Segoe UI", 10, "bold"),
+                                   fg="#ff4444", bg="#12121f")
+        self.fail_label.pack(side="left", padx=(0, 20))
+        self.blk_label = tk.Label(stats, text="⚠️ 0", font=("Segoe UI", 10, "bold"),
+                                  fg="#ffb020", bg="#12121f")
+        self.blk_label.pack(side="left")
+        self.folder_btn = tk.Button(stats, text="📂 Открыть папку результата",
+                                    command=self.open_output_folder,
+                                    state="disabled", bg="#2d2d44", fg="white",
+                                    relief="flat", font=("Segoe UI", 9), cursor="hand2")
+        self.folder_btn.pack(side="right")
+
+        self.root.after(80, self._poll_ui)
+
+    def refresh_browser_list(self):
+        self.browser_manager._scan_for_browsers()
+        new_list = self.browser_manager.get_browser_list()
+        self.browser_combo['values'] = new_list

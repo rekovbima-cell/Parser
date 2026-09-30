@@ -1,0 +1,38 @@
+xt = browser.new_context(
+                                viewport=viewport, user_agent=ua, locale=locale, timezone_id=tz
+                            )
+                    else:
+                        # Запуск внешнего исполняемого файла
+                        if engine == "chromium":
+                            browser = p.chromium.launch(
+                                executable_path=launch_kwargs["executable_path"],
+                                headless=launch_kwargs["headless"],
+                                args=launch_kwargs["args"]
+                            )
+                        elif engine == "firefox":
+                            browser = p.firefox.launch(
+                                executable_path=launch_kwargs["executable_path"],
+                                headless=launch_kwargs["headless"],
+                                args=launch_kwargs["args"]
+                            )
+                        
+                        context = browser.new_context(
+                            viewport=viewport,
+                            user_agent=ua,
+                            extra_http_headers=build_headers(ua, locale),
+                            locale=locale,
+                            timezone_id=tz,
+                            device_scale_factor=1,
+                            permissions=["notifications"],
+                        )
+                else:
+                    # Стандартный запуск bundled Chromium
+                    browser = p.chromium.launch(
+                        headless=True,
+                        args=[
+                            '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
+                            '--disable-blink-features=AutomationControlled',
+                            f'--lang={locale}', '--hide-scrollbars', '--mute-audio'
+                        ],
+                    )
+       

@@ -1,0 +1,46 @@
+ИСТОЧНИК: {r['url']}\nЗАГОЛОВОК: {r['title']}\n"
+        chunks.append(header + "\n" + r.get("_text", ""))
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(sep.join(chunks))
+
+def mergemarkdown(okresults, out_path):
+    toc = ["# Сводный документ\n", f"Сгенерировано {APPNAME} v{APPVERSION}\n",
+           "\n## Содержание\n"]
+    body_parts = []
+    for r in ok_results:
+        anchor = slugify(r["title"] or r["url"])
+        toc.append(f"- [{r['title'] or r['url']}](#{anchor})")
+        text = re.sub(r'^#\s.*\n+', '', r.get("_text", ""), count=1)
+        body_parts.append(
+            f"\n\n\n\n## {r['title'] or r['url']}\n\n"
+            f"Источник: {r['url']}\n\n---\n\n{text}")
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(toc) + "\n" + "".join(body_parts))
+
+def mergehtml(okresults, outdir, outpath):
+    from bs4 import BeautifulSoup
+    nav_items, sections = [], []
+    for r in ok_results:
+        anchor = slugify(r["title"] or r["url"])
+        nav_items.append(f'{r["title"] or r["url"]}')
+        fp = os.path.join(out_dir, r["file"])
+        try:
+            with open(fp, "r", encoding="utf-8", errors="ignore") as f:
+                raw = f.read()
+            soup = BeautifulSoup(raw, "html.parser")
+            for tag in soup(["script", "iframe", "object", "embed", "base", "form"]):
+                tag.decompose()
+            absolutize(soup, r["url"])
+            inner = str(soup.body) if soup.body else str(soup)
+        except Exception:
+            inner = "(не удалось прочитать)"
+        sections.append(
+            f'{r["title"] or r["url"]}'
+            f'Источник: {r["url"]}{inner}'
+        )
+    html_doc = f"""
+
+{APP_NAME} — Сводный экспорт
+
+body{{font-family:Segoe UI,Arial,sans-serif;background:#0d0d12;color:#e4e4e4;max-width:980px;margin:0 auto;padding:30px;line-height:1.6;}}
+nav{{background:#1a1a2e;p

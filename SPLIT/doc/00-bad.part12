@@ -1,0 +1,28 @@
+e" placeholder="https://docs.example.com/quickstart&#10;https://example.org/api/reference&#10;https://blog.example.io/release-notes&#10;&#10;— по одному URL в строке"></textarea>
+          <div class="chips" id="urlChips"></div>
+          <div class="mini-actions" style="margin-top:12px">
+            <button class="mbtn" id="btnSample"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg>Пример</button>
+            <button class="mbtn" id="btnDedupe"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg>Дедуп</button>
+            <button class="mbtn" id="btnNormalize"><svg class="ic" viewBox="0 0 24 24"><path d="M4 12h10l-3-3m3 3l-3 3"/><path d="M20 6v12"/></svg>https://</button>
+            <button class="mbtn" id="btnClearUrls"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Очистить</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>
+          <span class="h2-l">
+            <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.87 1.2V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 7.2 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 3 15a1.7 1.7 0 0 0-1.6-1H1a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 2.6 8.2"/></svg>
+            Настройки сбора
+          </span>
+        </h2>
+        <div class="body" style="display:flex;flex-direction:column;gap:14px">
+
+          <div class="field">
+            <label>Формат сохранения</label>
+            <select id="fmt">
+              <option value="pdf">PDF — точная копия страницы</option>
+              <option value="html">HTML — исходная разметка</option>
+              <option value="txt">TXT — чистый текст</option>
+              <option value="doc">DOCX — документ Word</option>
+         

@@ -1,0 +1,42 @@
+     elif fmt == "md":
+                    merge_markdown(ok_results, merged_path)
+                elif fmt == "html":
+                    merge_html(ok_results, out_dir, merged_path)
+                elif fmt == "docx":
+                    merge_docx(ok_results, merged_path)
+                size = os.path.getsize(merged_path)
+                self.log(f"   ✅ Объединённый файл: {human_size(size)} -> {merged_name}")
+                merged_filename = merged_name
+            except Exception as e:
+                self.log(f"   ❌ Ошибка объединения: {e}")
+
+        try:
+            totals = write_manifest_and_index(manifest, out_dir, merged_filename)
+            self.log("\n📊 manifest.json и INDEX.md записаны")
+            self.log(f"   Σ объём: {human_size(totals['bytes'])} | Σ слов: {totals['words']}")
+        except Exception as e:
+            self.log(f"⚠️ Не удалось записать manifest/index: {e}")
+
+        self.log("\n" + "=" * 60)
+        status_word = "ОСТАНОВЛЕНО" if self.stop_event.is_set() else "ГОТОВО"
+        self.log(f"🎉 {status_word}! Успешно: {counters['ok']} | Ошибок: {counters['fail']} "
+                 f"| Подозрений на блок: {counters['blocked']}")
+        self.log(f"📁 Папка: {out_dir}")
+        self.log("=" * 60)
+
+        self.set_progress(100)
+        self.ui_q.put(("done", {
+            "ok": counters["ok"], "fail": counters["fail"], "blocked": counters["blocked"],
+            "out_dir": out_dir, "stopped": self.stop_event.is_set(),
+        }))
+
+    def _on_finished(self, payload):
+        self.is_running = False
+        self.btn.config(state="normal", text="🚀 НАЧАТЬ")
+        self.stop_btn.config(state="disabled", text="⛔ СТОП")
+        self.folder_btn.config(state="normal")
+
+        try:
+            with open(os.path.join(payload["out_dir"], "RUN.log"), "w", encoding="utf-8") as f:
+                f.write("\n".join(self.log_buffer))
+        except Exc

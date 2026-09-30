@@ -1,0 +1,39 @@
+ = +$("#ret").value;
+  state.aggrOn = $("#aggr").checked;
+  state.fallbackOn = $("#fallback").checked;
+  $("#stampLbl").textContent = state.stamp;
+  $("#btnStart").disabled = true; $("#btnStop").disabled = false;
+  $("#tbody").innerHTML = ""; $("#tbl").style.display = ""; $("#emptyState").style.display = "none";
+  ["#btnZip","#btnMerged","#btnManifest","#btnIndex"].forEach(s => $(s).disabled = true);
+  setPhase("running"); setStatus("работаю · " + urls.length + " URL");
+  state.t0 = performance.now();
+  state.timer = setInterval(updStats, 500);
+  rule("=", "head");
+  log("MEGA TANK · старт · папка результата MEGA_TANK_" + state.stamp, "head");
+  log("формат " + FORMAT_LABEL[state.fmt] + " · поток " + $("#conc").value + " · ретраи " + state.ret + " · fallback " + (state.fallbackOn ? "вкл" : "выкл"), "info");
+
+  const conc = Math.max(1, +$("#conc").value);
+  const worker = async () => {
+    state.active++;
+    while(!state.stopReq){
+      const i = state.idx++;
+      if(i >= state.urls.length) break;
+      try{ await processUrl(state.urls[i]); }catch(e){ log("воркер: " + String(e).slice(0,90), "err"); record(state.urls[i], { status:"fail", title:state.urls[i] }); }
+    }
+    state.active--;
+  };
+  await Promise.all(Array.from({ length: conc }, worker));
+
+  clearInterval(state.timer);
+  state.running = false;
+  $("#btnStart").disabled = false; $("#btnStop").disabled = true;
+  setPhase(state.stopReq ? "stopped" : "done");
+  setStatus(state.stopReq ? "остановлено" : "готово");
+  const done = state.ok + state.fail + state.block;
+  log("итог: " + state.ok + " ok · " + state.fail + " ошибок · " + state.block + " блоков", "head");
+  toast("Пакет завершён", state.ok + " из " + done + " URL успешно");
+  if(state.results.some(r => r.text || r.blob)) ["#btnZip","#btnMerged","#btnManifest","#btnIndex"].forEach(s => $(s).disabled = false);
+  updStats();
+}
+
+/* =======================

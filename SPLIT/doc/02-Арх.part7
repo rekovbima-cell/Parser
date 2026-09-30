@@ -1,0 +1,53 @@
+новленную логику скрапинга и расширенный GUI. Код является самодостаточным и готов к запуску при наличии установленных зависимостей (Playwright, requests и др.).
+
+```python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+================================================================================
+ MEGA TANK v3.0 — UNIVERSAL DOCUMENTATION SCRAPER (EXTENDED EDITION)
+ Пересобран: 30.06.2026 | Extended: 29.09.2026
+================================================================================
+ Что нового в этом обновлении:
+   • Поддержка внешних портативных браузеров (Chrome/Firefox/LibreWolf Portable).
+   • Интеграция с существующими пользовательскими профилями (сохранение сессий).
+   • Подключение к запущенным инстансам через CDP (Chromium) и Juggler (Firefox).
+   • Автоматическое обнаружение портативных приложений в текущей директории и 
+     стандартных путях PortableApps.
+   • Адаптация Stealth-скриптов под движки Gecko и Blink.
+   • Сохранение всей архитектуры v3.0 (пототокобезопасность, автоустановка, UI).
+================================================================================
+"""
+
+import sys
+import os
+import subprocess
+import importlib
+import threading
+import queue
+import time
+import random
+import re
+import json
+import socket
+import webbrowser
+import glob
+from datetime import datetime
+from urllib.parse import urlparse, urljoin
+
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+
+# ==============================================================================
+# ГЛУШКА КОНСОЛИ (Windows cp866/cp1251 → UnicodeEncodeError на эмодзи)
+# ==============================================================================
+def _fix_console():
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+_fix_console()
+
+# ====================

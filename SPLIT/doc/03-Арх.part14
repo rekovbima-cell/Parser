@@ -1,0 +1,17 @@
+3f4f6. Верхний блок имеет заголовок 'Chrome' с синей иконкой #1a73b3 и текстом 'user-data-dir=/path/to/profile'. Средний блок имеет заголовок 'Firefox' с фиолетовой иконкой #6366f1 и текстом '-profile /path/to/profile'. Нижний блок имеет заголовок 'Playwright' с синей иконкой #1a73b3 и текстом 'storageState(auth-state.json)'. Каждый блок имеет белый фон #ffffff, тонкие синие рамки #1a73b3, и небольшие тени. Между блоками вертикальные стрелки #6366f1 указывают направление потока данных. Все текстовые метки выполнены на русском языке черным шрифтом #1f2937. Композиция симметричная, визуально сбалансированная."
+              class="w-full rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300"
+            />
+
+            <div class="space-y-6">
+              <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300" data-ref="https://yashaka.github.io/selene/faq/custom-user-profile-howto/|27">
+                Запуск с пользовательскими профилями
+              </h3>
+              <p class="text-gray-700 dark:text-gray-300">
+                Для запуска Google Chrome с пользовательским профилем используйте аргумент --user-data-dir для указания каталога, содержащего данные пользователя. Если существует несколько профилей в этом каталоге, также используйте аргумент --profile-directory для выбора конкретного.
+              </p>
+              <p class="text-gray-700 dark:text-gray-300">
+                Для Firefox пользовательский профиль можно запустить с помощью переключателя командной строки -profile, за которым следует путь к корневому каталогу профиля. Путь можно найти в браузере, перейдя на about:profiles.
+              </p>
+              
+              <div class="pl-4 pr-3 py-3 border-l-4 border-primary-500 bg-primary-50/40 dark:bg-primary-900/30 rounded-r-lg">
+                <p class="text-sm font-medium text-primary-900 dark:text-primary-

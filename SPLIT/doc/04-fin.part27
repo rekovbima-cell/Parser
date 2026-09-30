@@ -1,0 +1,38 @@
+             doc.addheading(safexml_text(title or url), 0)
+                        doc.addparagraph(safexml_text(f"Источник: {url}"))
+                        doc.addparagraph(safexml_text(
+                            f"Сохранено: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"))
+                        doc.addparagraph(safexml_text(
+                            f"Браузер: {plan['label']} · режим: {plan['mode']}"))
+                        doc.add_heading('Содержимое:', level=1)
+                        for para in text_content.split('\n'):
+                            para = safexmltext(para).strip()
+                            if para:
+                                doc.add_paragraph(para)
+                        doc.save(file_path)
+                        result["wordcount"] = len(textcontent.split())
+                        result["text"] = textcontent
+
+                    # ---------- экспорт сессии (cookies) ----------
+                    if settings.get("exportstorage") and session.ownscontext is False:
+                        pass      # чужой контекст не дампим — это данные пользователя
+                    saved = True
+
+                finally:
+                    if session is not None:
+                        if serial:
+                            PROFILE_LOCK.acquire()
+                        try:
+                            session.close()
+                        finally:
+                            if serial:
+                                PROFILE_LOCK.release()
+
+            if saved:
+                size = os.path.getsize(file_path)
+                result["status"] = "ok"
+                result["file"] = os.path.basename(file_path)
+                result["size_bytes"] = size
+                if result["method"] == "playwright":
+                    result["method"] = f"{plan['mode']}:{session.engine if session else 'chromium'}"
+                logcb(f"   ✅ {

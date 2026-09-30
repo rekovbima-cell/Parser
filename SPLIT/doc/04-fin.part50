@@ -1,0 +1,40 @@
+tusword = "ОСТАНОВЛЕНО" if self.stopevent.is_set() else "ГОТОВО"
+        self.log(f"🎉 {status_word}! Успешно: {counters['ok']} | Ошибок: {counters['fail']} "
+                 f"| Подозрений на блок: {counters['blocked']}", "head")
+        self.log(f"📁 Папка: {out_dir}", "info")
+        self.log("=" * 62, "head")
+
+        self.set_progress(100)
+        self.ui_q.put(("done", {
+            "ok": counters["ok"], "fail": counters["fail"], "blocked": counters["blocked"],
+            "outdir": outdir, "stopped": self.stopevent.isset(),
+        }))
+
+    def exportstorage(self, out_dir, settings):
+        """Открывает тот же браузер/профиль и выгружает storage_state.json."""
+        try:
+            from playwright.syncapi import syncplaywright
+            plan = self.browsermanager.buildplan(
+                settings["externalbrowser"], settings["customprofile_path"] or "",
+                settings["useprofile"], False, settings["cdpport"],
+                True, settings["copyprofile"], logcb=self.log)
+            plan["headless"] = True
+            ua = random_ua()
+            locale, tz = randomlocaletz()
+            with sync_playwright() as p:
+                session = openwith_fallback(p, plan, ua, locale, tz,
+                                              random.choice(VIEWPORTS), False, self.log)
+                try:
+                    if session.owns_context:
+                        dumpstoragestate(session, out_dir, self.log)
+                    else:
+                        self.log("   ℹ️ контекст принадлежит браузеру пользователя — "
+                                 "cookies не выгружаем (приватность)", "warn")
+                finally:
+                    session.close()
+        except Exception as e:
+            self.log(f"⚠️ экспорт сессии не удался: {str(e)[:140]}", "warn")
+
+    def onfinished(self, payload):
+        self.is_running = False
+        self.btn.co

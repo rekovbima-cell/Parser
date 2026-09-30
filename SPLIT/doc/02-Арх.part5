@@ -1,0 +1,29 @@
+как это прервет работу пользователя. Поэтому в реализации добавлена проверка: если используется внешний браузер, процесс браузера не terminatesя автоматически [[17](https://www.browserstack.com/guide/playwright-connect-to-existing-browser)].
+
+## 4. Интеграция в основной поток скрапинга
+
+Функция `scrape_one` была модифицирована для приема экземпляра `ExternalBrowserManager` и параметров выбранного браузера.
+
+### 4.1. Адаптация Playwright API
+
+Вместо прямого вызова `p.chromium.launch()` код теперь проверяет настройки:
+```python
+if ext_browser_name != "System Default":
+    engine, launch_kwargs = browser_manager.launch_or_connect(...)
+    if launch_kwargs.get("connect_cdp"):
+        browser = p.chromium.connect_over_cdp(launch_kwargs["connect_cdp"])
+    else:
+        if engine == "chromium":
+            browser = p.chromium.launch(executable_path=..., args=...)
+        elif engine == "firefox":
+            browser = p.firefox.launch(executable_path=..., args=...)
+```
+Этот подход обеспечивает гибкость и позволяет использовать один и тот же интерфейс для разных типов браузеров [[5](https://playwright.dev/docs/api/class-browsertype), [6](https://playwright.dev/python/docs/api/class-browsertype)].
+
+### 4.2. Обработка ошибок и фоллбэк
+
+Если запуск внешнего браузера невозможен (например, отсутствующий исполняемый файл или занятый порт), система логирует ошибку и, в зависимости от настроек, может переключиться на стандартный bundled Chromium или использовать запасной метод `requests`. Это гарантирует отказоустойчивость инструмента [[7](https://stackoverflow.com/questions/62281859/how-to-use-installed-version-of-chrome-in-playwright)].
+
+### 4.3. Сохранение результатов
+
+Логика сохранения файлов (PDF, HTML, MD, DOCX) осталась неизменной, так как она работает на уровне абстракции страницы Playwright, которая единообразна для всех поддерживаемых браузеров. Однако при извлечении текс

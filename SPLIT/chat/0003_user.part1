@@ -1,0 +1,229 @@
+ "log":
+                    self.log_text.config(state="normal")
+                    self.log_text.insert(tk.END, payload + "\n")
+                    self.log_text.see(tk.END)
+                    self.log_text.config(state="disabled")
+                elif kind == "progress":
+                    self.progress.set(payload)
+                elif kind == "stats":
+                    ok, fail = payload
+                    self.ok_label.config(text=f"✅ {ok}")
+                    self.fail_label.config(text=f"❌ {fail}")
+                elif kind == "done":
+                    self._on_finished(payload)
+        except queue.Empty:
+            pass
+        try:
+            self.root.after(80, self._poll_ui)
+        except tk.TclError:
+            pass
+
+    # ---------------- Запуск / остановка ----------------
+    def start(self):
+        if self.is_running:
+            return
+        raw_urls = self.urls.get("1.0", tk.END).strip()
+        if not raw_urls:
+            messagebox.showwarning("Ошибка", "Введите хотя бы один URL!")
+            return
+
+        seen = set()
+        valid_urls = []
+        for u in (x.strip() for x in raw_urls.splitlines()):
+            if not u:
+                continue
+            if not u.startswith(("http://", "https://")):
+                self.log(f"⚠️ Невалидный URL пропущен: {u}")
+                continue
+            if u in seen:
+                continue
+            seen.add(u)
+            valid_urls.append(u)
+
+        if not valid_urls:
+            messagebox.showwarning("Ошибка", "Ни одного валидного URL не найдено!")
+            return
+
+        out_dir = os.path.join(BASE_DIR, f"MEGA_TANK_{now_stamp()}")
+        os.makedirs(out_dir, exist_ok=True)
+        self.last_output_dir = out_dir
+
+        settings = {
+            "fmt": FORMAT_MAP[self.fmt_label.get()],
+            "merge": self.merge.get(),
+            "aggressive": self.aggr.get(),
+            "concurrency": max(1, min(5, self.concurrency.get())),
+            "retries": max(0, min(3, self.retries.get())),
+        }
+
+        self.stop_event.clear()
+        self.is_running = True
+        self.btn.config(state="disabled", text="⏳ РАБОТАЮ...")
+        self.stop_btn.config(state="normal")
+        self.folder_btn.config(state="disabled")
+        self.log_text.config(state="normal")
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.config(state="disabled")
+        self.set_progress(0)
+        self.set_stats(0, 0)
+
+        threading.Thread(target=self._coordinator, args=(valid_urls, out_dir, settings), daemon=True).start()
+
+    def stop(self):
+        self.stop_event.set()
+        self.stop_btn.config(state="disabled", text="⛔ ОСТАНАВЛИВАЮ...")
+        self.log("\n⛔ Остановка запрошена пользователем — потоки завершают текущие задачи...")
+
+    def on_close(self):
+        if self.is_running:
+            if not messagebox.askyesno("Подтверждение", "Скрапинг ещё идёт. Закрыть всё равно?"):
+                return
+            self.stop_event.set()
+        self.root.destroy()
+
+    def open_output_folder(self):
+        if not self.last_output_dir or not os.path.isdir(self.last_output_dir):
+            return
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(self.last_output_dir)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", self.last_output_dir])
+            else:
+                subprocess.Popen(["xdg-open", self.last_output_dir])
+        except Exception:
+            webbrowser.open(f"file://{self.last_output_dir}")
+
+    # ---------------- Координатор + воркеры ----------------
+    def _coordinator(self, urls, out_dir, settings):
+        url_q = queue.Queue()
+        for u in urls:
+            url_q.put(u)
+
+        manifest = []
+        counters = {"ok": 0, "fail": 0, "done": 0}
+        total = len(urls)
+
+        self.log("=" * 60)
+        self.log(f"🚀 {APP_NAME} v{APP_VERSION}")
+        self.log(f"📁 Папка результата: {out_dir}")
+        self.log(f"📄 Формат: {settings['fmt'].upper()} | Объединить: {'ДА' if settings['merge'] else 'НЕТ'}")
+        self.log(f"🌐 URLs: {total} | Потоков: {settings['concurrency']} | Повторов: {settings['retries']}")
+        self.log("=" * 60)
+
+        def worker(worker_id):
+            while not self.stop_event.is_set():
+                try:
+                    url = url_q.get_nowait()
+                except queue.Empty:
+                    break
+                self.log(f"\n[поток {worker_id}] 📥 {url[:75]}")
+                res = scrape_one(url, settings["fmt"], out_dir, settings, self.log)
+                with self.lock:
+                    manifest.append(res)
+                    if res["status"] == "ok":
+                        counters["ok"] += 1
+                    else:
+                        counters["fail"] += 1
+                        self.log(f"   ❌ Не удалось: {url} — {str(res.get('error'))[:150]}")
+                    counters["done"] += 1
+                    self.set_stats(counters["ok"], counters["fail"])
+                    self.set_progress(counters["done"] / total * 100)
+
+                if self.stop_event.is_set():
+                    break
+                delay = random.uniform(8.0, 15.0) if settings["aggressive"] else random.uniform(3.0, 7.0)
+                self.log(f"   ⏱️ [поток {worker_id}] пауза {delay:.1f} сек")
+                slept = 0.0
+                while slept < delay and not self.stop_event.is_set():
+                    time.sleep(0.25)
+                    slept += 0.25
+
+        threads = [threading.Thread(target=worker, args=(i + 1,), daemon=True)
+                   for i in range(settings["concurrency"])]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # сортируем манифест в исходном порядке URL для предсказуемости
+        order = {u: i for i, u in enumerate(urls)}
+        manifest.sort(key=lambda r: order.get(r["url"], 999999))
+
+        ok_results = [r for r in manifest if r["status"] == "ok"]
+        merged_filename = None
+
+        if settings["merge"] and ok_results and not self.stop_event.is_set():
+            self.log("\n" + "=" * 60)
+            self.log("🔗 ОБЪЕДИНЕНИЕ ФАЙЛОВ...")
+            self.log("=" * 60)
+            fmt = settings["fmt"]
+            merged_name = f"MEGA_FULL.{fmt}"
+            merged_path = os.path.join(out_dir, merged_name)
+            try:
+                if fmt == "pdf":
+                    merge_pdf(ok_results, out_dir, merged_path, self.log)
+                elif fmt in ("txt",):
+                    merge_text_like(ok_results, merged_path, fmt)
+                elif fmt == "md":
+                    merge_markdown(ok_results, merged_path)
+                elif fmt == "html":
+                    merge_html(ok_results, out_dir, merged_path)
+                elif fmt == "docx":
+                    merge_docx(ok_results, merged_path)
+                size = os.path.getsize(merged_path)
+                self.log(f"   ✅ Объединённый файл: {human_size(size)} -> {merged_name}")
+                merged_filename = merged_name
+            except Exception as e:
+                self.log(f"   ❌ Ошибка объединения: {e}")
+
+        try:
+            write_manifest_and_index(manifest, out_dir, merged_filename)
+            self.log("\n📊 manifest.json и INDEX.md записаны")
+        except Exception as e:
+            self.log(f"⚠️ Не удалось записать manifest/index: {e}")
+
+        self.log("\n" + "=" * 60)
+        status_word = "ОСТАНОВЛЕНО" if self.stop_event.is_set() else "ГОТОВО"
+        self.log(f"🎉 {status_word}! Успешно: {counters['ok']} | Ошибок: {counters['fail']}")
+        self.log(f"📁 Папка: {out_dir}")
+        self.log("=" * 60)
+
+        self.set_progress(100)
+        self.ui_q.put(("done", {
+            "ok": counters["ok"], "fail": counters["fail"],
+            "out_dir": out_dir, "stopped": self.stop_event.is_set(),
+        }))
+
+    def _on_finished(self, payload):
+        self.is_running = False
+        self.btn.config(state="normal", text="🚀 НАЧАТЬ")
+        self.stop_btn.config(state="disabled", text="⛔ СТОП")
+        self.folder_btn.config(state="normal")
+        title = "Остановлено" if payload["stopped"] else "Готово"
+        messagebox.showinfo(
+            title,
+            f"✅ Успешно: {payload['ok']}\n❌ Ошибок: {payload['fail']}\n📁 Папка:\n{payload['out_dir']}",
+        )
+
+
+# ==============================================================================
+# ЗАПУСК
+# ==============================================================================
+if __name__ == "__main__":
+    installer = AutoInstaller()
+    deps_ok = installer.run()
+
+    if not deps_ok:
+        print("\n⚠️ Не все зависимости установлены — приложение может работать нестабильно.")
+        try:
+            answer = input("Запустить всё равно? (y/n): ").strip().lower()
+        except EOFError:
+            answer = "n"
+        if answer != "y":
+            input("\nНажмите Enter для выхода...")
+            sys.exit(1)
+
+    root = tk.Tk()
+    app = App(root)
+    root.mainloop()

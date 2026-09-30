@@ -1,0 +1,45 @@
+             profile_dir = cand
+                            break
+                    if not profile_dir:
+                        for sub in cfg["sub_paths"]:
+                            cand = os.path.join(root, *sub.split("/"), "Data", "profile")
+                            if os.path.isdir(cand):
+                                profile_dir = cand
+                                break
+                    found[name] = {
+                        "name": name,
+                        "exe": exe_path,
+                        "engine": cfg["engine"],
+                        "channel": None,
+                        "profilearg": cfg["profilearg"],
+                        "profiledir": profiledir,
+                        "base_dir": root,
+                        "kind": "portable",
+                    }
+        return list(found.values())
+
+    def scansystem(self):
+        out = []
+        for name, engine, channel, paths in self.SYSTEM_CANDIDATES:
+            for raw in paths:
+                path = self._expand(raw)
+                if path and os.path.isfile(path):
+                    out.append({
+                        "name": name, "exe": path, "engine": engine, "channel": channel,
+                        "profile_arg": "--user-data-dir" if engine == "chromium" else "-profile",
+                        "profiledir": "", "basedir": os.path.dirname(path),
+                        "kind": "system",
+                    })
+                    break
+        return out
+
+    def scan(self):
+        with self._lock:
+            try:
+                self.discovered = self.scanportable() + self.scansystem()
+            except Exception as e:
+                self.discovered = []
+                self.log_cb(f"   ⚠️ сканирование браузеров не удалось: {e}")
+            names = [b["name"] for b in self.discovered]
+        self.log_cb(f"🔎 Найдено браузеров: {len(names)}"
+               

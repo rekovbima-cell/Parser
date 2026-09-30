@@ -1,0 +1,39 @@
+rn
+        if parsed.path == "/render":
+            url = (parse_qs(parsed.query).get("url") or [""])[0]
+            if not url.startswith(("http://", "https://")):
+                self._send(400, json.dumps({"error": "bad url"}), "application/json")
+                return
+            log("render: %s" % url)
+            html, method = render(url)
+            if not html:
+                self._send(502, json.dumps({"error": "render failed", "url": url}), "application/json")
+                return
+            low = html[:4000].lower()
+            blocked = any(m in low for m in BLOCKED_MARKERS)
+            self._send(200, html, "text/html; charset=utf-8",
+                       {"X-Preview-Method": method, "X-Preview-Status": "blocked" if blocked else "ok"})
+            return
+        self._send(404, "not found", "text/plain; charset=utf-8")
+
+    def log_message(self, fmt, *args):
+        pass
+
+
+def main():
+    if sys.platform.startswith("win"):
+        try:
+            import ctypes
+            ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+        except Exception:
+            pass
+    log("PREVIEW_SERVER на http://127.0.0.1:%d/ (там же консоль 00-bad-tank.html)" % PORT)
+    log("API рендеринга: http://127.0.0.1:%d/render?url=..." % PORT)
+    try:
+        ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    except KeyboardInterrupt:
+        log("остановлено")
+
+
+if __name__ == "__main__":
+    main()

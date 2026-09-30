@@ -1,0 +1,13 @@
+ull, 2), "application/json");
+  });
+  $("#btnIndex").addEventListener("click", () => download("INDEX_" + state.stamp + ".md", indexMd(), MIME.md));
+  updCount();
+  setPhase("idle"); setStatus("готов");
+  log("MEGA TANK WEB CONSOLE готова", "head");
+  log("Рекомендуется запуск PREVIEW_SERVER.py — тогда предпросмотр идёт через локальный браузерный рендеринг, без публичных CORS-прокси", "info");
+}
+
+init();
+</script>
+</body>
+</html>

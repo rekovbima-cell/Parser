@@ -1,0 +1,50 @@
+{frame_text}\n")
+            except Exception:
+                continue
+        if extra:
+            text_content += "\n--- СОДЕРЖИМОЕ ФРЕЙМОВ ---\n" + "\n".join(extra)
+    return text_content
+
+
+def extract_page_html(page):
+    """Возвращает HTML только содержательного контейнера для Markdown."""
+    try:
+        return page.evaluate("""
+            () => {
+              const selector = "article, main, [role='main'], .article, .post, .entry-content, .post-content, .content";
+              const root = document.querySelector(selector) || document.body || document.documentElement;
+              const copy = root.cloneNode(true);
+              copy.querySelectorAll(`script, style, noscript, template, svg, canvas, iframe, nav, header, footer, aside,
+                [aria-hidden="true"], [role="navigation"], [role="banner"], [role="contentinfo"],
+                .cookie, .cookies, .consent, .popup, .modal, .advert, .ads, .ad, .social-share`)
+                .forEach((node) => node.remove());
+              return copy.outerHTML;
+            }
+        """)
+    except Exception:
+        return page.content()
+
+
+def html_to_markdown(html_content, page_url=""):
+    """HTML -> Markdown. Сначала пробуем markdownify (чистый результат),
+    при сбое — собственный лёгкий конвертер на BeautifulSoup."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html_content, "html.parser")
+    for tag in soup([
+        "script", "style", "noscript", "template", "svg", "iframe",
+        "nav", "header", "footer", "aside",
+    ]):
+        tag.decompose()
+
+    try:
+        from markdownify import markdownify as md_convert
+        body = soup.body or soup
+        md = md_convert(str(body), heading_style="ATX", bullets="-")
+        md = re.sub(r'\n{3,}', '\n\n', md).strip()
+        if md:
+            return md
+    except Exception:
+        pass
+
+    # --- Фоллбэк-конвертер, если markdown

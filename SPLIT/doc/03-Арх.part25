@@ -1,0 +1,20 @@
+        <h4 class="text-base font-semibold text-primary-700 dark:text-primary-300" data-ref="https://medium.com/analytics-vidhya/how-to-create-a-thread-safe-singleton-class-in-python-822e1170a7f6|21">Одиночный класс</h4>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 text-sm">
+                  Потокобезопасный одиночный класс может быть реализован в Python с использованием __new__ и threading.Lock. Экземпляр создается только если он не существует (cls._instance is None). Чтобы предотвратить условия гонки, дополнительная проверка выполняется внутри контекста блокировки.
+                </p>
+              </div>
+
+              <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+                <div class="flex items-center space-x-3 mb-4">
+                  <i data-lucide="activity" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                  <h4 class="text-base font-semibold text-accent-700 dark:text-accent-300" data-ref="https://blog.adarshd.dev/posts/thread-safety-in-python/|22">Глобальный блокировщик</h4>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 text-sm">
+                  В CPython Глобальный блокировщик интерпретатора (GIL) гарантирует, что только один поток выполняет байт-код Python одновременно. Это делает многопоточность эффективной для задач, ограниченных вводом-выводом, но не для задач, ограниченных ЦП. Интервал переключения контекста по умолчанию составляет <span class="mx-1 px-1.5 py-0.5 rounded-md bg-accent-100 dark:bg-accent-900/30 text-accent-800 dark:text-accent-300 font-semibold text-sm">5 миллисекунд</span>.
+                </p>
+              </div>
+            </div>
+
+            <div class="pl-4 pr-3 py-3 border-l-4 border-primary-500 bg-primary-50/40 dark:bg-primary-900/30 rounded-r-lg">
+              <p cla

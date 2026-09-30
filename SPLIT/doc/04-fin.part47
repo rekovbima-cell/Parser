@@ -1,0 +1,50 @@
+is_running:
+            return
+        self.stop_event.set()
+        self.stop_btn.config(state="disabled", text="⛔ ОСТАНАВЛИВАЮ...")
+        self.log("\n⛔ Остановка запрошена — потоки завершают текущие задачи "
+                 "(браузер пользователя закрыт не будет)...", "warn")
+
+    def on_close(self):
+        if self.is_running:
+            if not messagebox.askyesno("Подтверждение", "Скрапинг ещё идёт. Закрыть всё равно?"):
+                return
+            self.stop_event.set()
+            time.sleep(0.4)
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
+
+    def openoutputfolder(self):
+        if not self.lastoutputdir or not os.path.isdir(self.lastoutputdir):
+            return
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(self.lastoutputdir)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", self.lastoutputdir])
+            else:
+                subprocess.Popen(["xdg-open", self.lastoutputdir])
+        except Exception:
+            webbrowser.open(f"file://{self.lastoutputdir}")
+
+    # ---------------- Координатор + воркеры ----------------
+    def coordinator(self, urls, outdir, settings):
+        url_q = queue.Queue()
+        for u in urls:
+            url_q.put(u)
+
+        manifest = []
+        counters = {"ok": 0, "fail": 0, "done": 0, "blocked": 0}
+        total = len(urls)
+
+        # Профиль/CDP = один браузер на процесс → принудительно один поток
+        sharedsession = bool(settings["useprofile"] or settings["attach_cdp"])
+        if shared_session and settings["concurrency"] > 1:
+            self.log(f"⚠️ Профиль/CDP не допускают {settings['concurrency']} потоков: "
+                     f"user-data-dir блокируется одним процессом. Ставлю 1 поток.", "warn")
+            settings["concurrency"] = 1
+
+        self.log("=" * 62, "head")
+    

@@ -1,0 +1,37 @@
+-gradient(600px 400px at 12% 8%, rgba(0,255,136,.10), transparent 60%),
+    radial-gradient(700px 500px at 88% 12%, rgba(90,169,255,.08), transparent 60%),
+    radial-gradient(800px 600px at 50% 105%, rgba(160,107,255,.09), transparent 60%);
+  animation:drift 24s ease-in-out infinite alternate;
+}
+.bgfx::after{
+  content:"";position:absolute;inset:0;opacity:.35;
+  background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+  background-size:46px 46px;
+  mask-image:radial-gradient(circle at 50% 25%,#000 10%,transparent 78%);
+}
+@keyframes drift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-3%,2%,0) scale(1.08)}}
+
+.wrap{position:relative;z-index:1;max-width:1560px;margin:0 auto;padding:20px 20px 60px}
+
+/* ---- top bar ---- */
+.topbar{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  background:linear-gradient(135deg,rgba(26,26,46,.95),rgba(18,18,31,.9));
+  border:1px solid var(--line);border-radius:18px;padding:16px 20px;
+  box-shadow:0 20px 50px -30px rgba(0,255,136,.4),inset 0 1px 0 rgba(255,255,255,.04);
+  position:relative;overflow:hidden;
+}
+.topbar::after{
+  content:"";position:absolute;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--acc),var(--info),var(--violet),transparent);
+  opacity:.75;animation:scan 5s linear infinite;
+}
+@keyframes scan{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.logo{width:56px;height:56px;flex:0 0 auto;filter:drop-shadow(0 0 12px rgba(0,255,136,.45))}
+.logo svg{width:100%;height:100%}
+.tb-title{flex:1 1 260px;min-width:220px}
+.tb-title h1{margin:0;font-size:22px;font-weight:800;letter-spacing:.4px}
+.tb-title h1 span{color:var(--acc)}
+.tb-title p{margin:3px 0 0;color:var(--muted);font-size:12.5px}
+.tb-badges{display:flex;gap:8px;flex-wrap:wrap;ali

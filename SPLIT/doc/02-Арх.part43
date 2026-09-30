@@ -1,0 +1,46 @@
+                self.log(f"   ❌ Не удалось: {url} — {str(res.get('error'))[:150]}")
+                    if res.get("blocked_suspected"):
+                        counters["blocked"] += 1
+                    counters["done"] += 1
+                    self.set_stats(counters["ok"], counters["fail"], counters["blocked"])
+                    self.set_progress(counters["done"] / total * 100)
+
+                if self.stop_event.is_set():
+                    break
+
+                if settings["aggressive"]:
+                    delay = random.uniform(1.0, 3.0)
+                else:
+                    delay = random.uniform(3.0, 7.0)
+                self.log(f"   ⏱️ [поток {worker_id}] пауза {delay:.1f} сек")
+                slept = 0.0
+                while slept < delay and not self.stop_event.is_set():
+                    time.sleep(0.25)
+                    slept += 0.25
+
+        threads = [threading.Thread(target=worker, args=(i + 1,), daemon=True)
+                   for i in range(settings["concurrency"])]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        order = {u: i for i, u in enumerate(urls)}
+        manifest.sort(key=lambda r: order.get(r["url"], 999999))
+
+        ok_results = [r for r in manifest if r["status"] == "ok"]
+        merged_filename = None
+
+        if settings["merge"] and ok_results and not self.stop_event.is_set():
+            self.log("\n" + "=" * 60)
+            self.log("🔗 ОБЪЕДИНЕНИЕ ФАЙЛОВ...")
+            self.log("=" * 60)
+            fmt = settings["fmt"]
+            merged_name = f"MEGA_FULL.{fmt}"
+            merged_path = os.path.join(out_dir, merged_name)
+            try:
+                if fmt == "pdf":
+                    merge_pdf(ok_results, out_dir, merged_path, self.log)
+                elif fmt == "txt":
+                    merge_text_like(ok_results, merged_path, fmt)
+           

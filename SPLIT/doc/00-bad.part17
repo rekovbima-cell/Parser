@@ -1,0 +1,45 @@
+      <svg class="ic" viewBox="0 0 24 24"><path d="M8 7h8M8 12h8M8 17h5"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              Объединённый файл
+            </button>
+            <button class="btn btn-ghost" id="btnManifest" disabled>
+              <svg class="ic" viewBox="0 0 24 24"><path d="M8 5l-5 7 5 7M16 5l5 7-5 7"/></svg>
+              manifest.json
+            </button>
+            <button class="btn btn-ghost" id="btnIndex" disabled>
+              <svg class="ic" viewBox="0 0 24 24"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/></svg>
+              INDEX.md
+            </button>
+          </div>
+          <div class="note" id="outNote">
+            Структура полностью повторяет Python-версию: <b>/files/*</b> · <b>MEGA_FULL.&lt;fmt&gt;</b> · <b>manifest.json</b> · <b>INDEX.md</b>.
+            В браузере нет прямого доступа к ФС — папка отдаётся одним ZIP-архивом.
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <footer>
+    MEGA TANK v3.0 · WEB CONSOLE · <b>30.06.2026</b><br>
+    Playwright-пайплайн (браузер + stealth + retries + fallback) воспроизведён на JS: параллельные воркеры, ротация профилей, эвристика блокировок, manifest/index.
+  </footer>
+</div>
+
+<div id="pdfStageHost"><div id="pdfStage"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   MEGA TANK v3.0 — WEB CONSOLE
+   Порты одноимённых сущностей из python-версии: sanitize / slugify /
+   human_size / looks_blocked / html_to_markdown / merge_* / manifest+index
+   ============================================================================ */
+
+const APP_NAME = "MEGA TANK";
+const APP_VERSION = "3.0";
+const BUILD_DATE = "30.06.2026";
+
+const FORMAT_MAP = { pdf:"pdf", html:"html", txt:"txt", doc:"docx", md:"md" };
+const FORMAT_LABEL = { pdf:"PDF", html:"HTML", txt:"

@@ -1,0 +1,51 @@
+result["_text"] = text_content
+
+            size = os.path.getsize(file_path)
+            result["status"] = "ok"
+            result["file"] = os.path.basename(file_path)
+            result["size_bytes"] = size
+            result["method"] = "requests-fallback"
+            result["error"] = None
+            log_cb(f"   ✅ (запасной метод) {fmt.upper()}: {human_size(size)}")
+        except Exception as e2:
+            result["error"] = f"{last_error} | fallback: {e2}"
+            log_cb(f"   ❌ Запасной метод тоже не сработал: {str(e2)[:120]}")
+    elif last_error and result["status"] != "ok":
+        result["error"] = last_error
+
+    result["elapsed_sec"] = round(time.time() - t0, 2)
+    return result
+
+
+# ==============================================================================
+# ОБЪЕДИНЕНИЕ ФАЙЛОВ
+# ==============================================================================
+def merge_pdf(ok_results, out_dir, out_path, log_cb):
+    from pypdf import PdfWriter
+    writer = PdfWriter()
+    for r in ok_results:
+        fp = os.path.join(out_dir, r["file"])
+        if os.path.exists(fp):
+            writer.append(fp)
+    writer.add_metadata({"/Title": f"{APP_NAME} Merged Export", "/Producer": f"{APP_NAME} v{APP_VERSION}"})
+    with open(out_path, "wb") as f:
+        writer.write(f)
+    writer.close()
+
+
+def merge_text_like(ok_results, out_path, fmt):
+    sep = "\n\n" + ("=" * 70) + "\n\n"
+    chunks = []
+    for r in ok_results:
+        header = f"ИСТОЧНИК: {r['url']}\nЗАГОЛОВОК: {r['title']}\n"
+        body = r.get("_text", "")
+        chunks.append(header + "\n" + body)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(sep.join(chunks))
+
+
+def merge_markdown(ok_results, out_path):
+    toc = ["# Сводный документ\n", f"_Сгенерировано {APP_NAME} v{APP_VERSION}_\n", "\n## Содержание\n"]
+    body_parts = []
+    for r in ok_results:
+        anchor = slu

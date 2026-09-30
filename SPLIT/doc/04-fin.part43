@@ -1,0 +1,37 @@
+ng: navigator.languages, "
+                                          "hw: navigator.hardwareConcurrency})")
+                    self.log(f"   navigator.webdriver = {info.get('wd')}", "info")
+                    self.log(f"   platform = {info.get('plat')} | languages = {info.get('lang')} "
+                             f"| hw = {info.get('hw')}", "mut")
+                    self.log(f"   UA = {str(info.get('ua'))[:110]}", "mut")
+                    try:
+                        ck = session.context.cookies()
+                        self.log(f"   🍪 cookies в контексте: {len(ck)}", "info")
+                    except Exception:
+                        pass
+                finally:
+                    session.close()
+            self.log("🧪 ТЕСТ ЗАВЕРШЁН УСПЕШНО", "ok")
+        except Exception as e:
+            self.log(f"❌ тест провален: {str(e)[:220]}", "err")
+        self.log("=" * 60)
+
+    def installbg(self, what):
+        threading.Thread(target=installplaywrightbrowser, args=(what, self.log),
+                         daemon=True).start()
+
+    def startuplog(self):
+        self.browsermanager.logcb = self.log
+        self.log("=" * 62)
+        self.log(f"🚀 {APPNAME} v{APPVERSION} · build {BUILD_DATE}", "head")
+        self.log("=" * 62)
+        self.log(f"📁 рабочая папка: {BASE_DIR}", "mut")
+        names = self.browser_manager.scan()
+        if not names:
+            self.log("ℹ️ портативные/системные браузеры не найдены — доступен bundled "
+                     "режим (Playwright Chromium).", "warn")
+        self.log("💡 чтобы подключиться к своему браузеру: закрой его, затем запусти с флагами", "mut")
+        self.log('   chrome.exe --remote-debugging-port=9222 '
+                 '--remote-debugging-address=127.0.0.1 --user-data-dir="C:\\mt_profile"', "mut")
+        self.log("   войди вручную на нужных сайтах → нажми «🔌 CDP» и «НАЧАТЬ»", "mut")
+        self.log("", "

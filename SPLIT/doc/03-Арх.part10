@@ -1,0 +1,19 @@
+stify-center">
+                    <i data-lucide="folder-tree" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                  </div>
+                  <span class="font-semibold text-lg text-primary-700 dark:text-primary-300">Управление профилями</span>
+                </div>
+                <i data-lucide="chevron-down" class="hs-accordion-active:rotate-180 transition-transform duration-300 w-5 h-5 text-primary-600 dark:text-primary-400"></i>
+              </button>
+              <div id="hs-collapse-arch-3" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300" aria-labelledby="hs-arch-3">
+                <div class="p-6 pt-0 space-y-4">
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://portableapps.com/node/5376|10">
+                    Каталог профиля для стандартной установки Portable Firefox находится по адресу x:\PortableApps\FirefoxPortable\Data, где 'x' - буква диска USB-накопителя. Этот каталог содержит все пользовательские данные, включая закладки, расширения и настройки.
+                  </p>
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://www.minjusticia.gov.co/programas-co/MASC/Documents/JSP/navegador/help.html|12">
+                    Профили Chrome Portable хранятся в каталоге Data\profile. Полный профиль включает папку Default, содержащую пользовательские данные, такие как cookies и локальное хранилище, а также файл Local State.
+                  </p>
+                  <div class="pl-4 pr-3 py-3 border-l-4 border-primary-500 bg-primary-50/40 dark:bg-primary-900/30 rounded-r-lg">
+                    <p class="text-sm font-medium text-primary-900 dark:text-primary-100 leading-relaxed" data-ref="https://portableapps.com/node/5376|10">
+                      <i data-lucide="circle-check" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+      

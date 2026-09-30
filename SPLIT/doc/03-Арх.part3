@@ -1,0 +1,35 @@
+hover:text-primary-700 dark:hover:text-primary-200 transition-colors">Заключение</a>
+        </div>
+        
+        <button onclick="toggleDarkMode()" class="btn-interactive p-2 rounded-lg bg-primary-100 dark:bg-primary-800 text-primary-600 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-700 transition-all">
+          <i data-lucide="sun" id="sunIcon" class="w-5 h-5"></i>
+          <i data-lucide="moon" id="moonIcon" class="w-5 h-5" style="display: none;"></i>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main class="min-h-screen">
+    <!-- Hero Section -->
+    <section id="home" class="pt-40 pb-20 bg-primary-50/50 dark:bg-gray-900" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="text-center mb-12">
+          <h2 class="text-4xl md:text-5xl font-bold mb-6 text-primary-700 dark:text-primary-300">
+            Архитектура интеграции внешних браузеров в MEGA TANK v3.0
+          </h2>
+          <p class="text-xl text-gray-700 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed">
+            Модернизация инструмента для поддержки внешних портативных браузеров и пользовательских профилей через протокол удаленной отладки и механизмов сохранения сессий
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8 items-center mt-16">
+          <div class="space-y-6">
+            <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300" data-ref="https://github.com/roniemartinez/browsers|9">
+              Обнаружение установленных браузеров
+            </h3>
+            <p class="text-gray-700 dark:text-gray-300">
+              Библиотека Python для обнаружения и запуска браузеров позволяет автоматически определять установленные браузеры на машине macOS, что является ключевым элементом для интеграции внешних исполняемых файлов.
+            </p>
+            
+ 

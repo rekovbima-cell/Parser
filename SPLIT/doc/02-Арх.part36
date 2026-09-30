@@ -1,0 +1,32 @@
+", bg="#2d2d44", fg="white").grid(
+            row=2, column=2, sticky="w", padx=5, pady=3)
+        self.retries = tk.IntVar(value=1)
+        tk.Spinbox(frame, from_=0, to=3, textvariable=self.retries, width=5,
+                   bg="#1e1e1e", fg="#00ff88", insertbackground="#00ff88",
+                   buttonbackground="#1e1e1e", relief="flat").grid(
+            row=2, column=3, sticky="w", padx=5, pady=3)
+
+        # --- НОВЫЕ НАСТРОЙКИ: ВЫБОР БРАУЗЕРА ---
+        tk.Label(frame, text="Браузер:", bg="#2d2d44", fg="white").grid(
+            row=3, column=0, sticky="w", padx=5, pady=3)
+        
+        browser_list = self.browser_manager.get_browser_list()
+        self.selected_browser = tk.StringVar(value=browser_list[0] if browser_list else "System Default (Playwright Bundled)")
+        self.browser_combo = ttk.Combobox(frame, textvariable=self.selected_browser, 
+                                          values=browser_list, state="readonly", width=25)
+        self.browser_combo.grid(row=3, column=1, sticky="w", padx=5, pady=3)
+        
+        tk.Button(frame, text="🔄 Обновить список", command=self.refresh_browser_list,
+                  bg="#1e1e1e", fg="#00ff88", relief="flat", font=("Segoe UI", 8)).grid(
+            row=3, column=2, sticky="w", padx=5, pady=3)
+
+        tk.Label(frame, text="Профиль (опционально):", bg="#2d2d44", fg="white").grid(
+            row=4, column=0, sticky="w", padx=5, pady=3)
+        self.profile_path_var = tk.StringVar()
+        tk.Entry(frame, textvariable=self.profile_path_var, bg="#1e1e1e", fg="#00ff88",
+                 relief="flat").grid(row=4, column=1, columnspan=2, sticky="ew", padx=5, pady=3)
+        tk.Button(frame, text="...", command=self.browse_profile,
+                  bg="#1e1e1e", fg="#00ff88", relief="flat", width=3).grid(
+            row=4, column=3, sticky="w", padx=0, pady=3)
+
+        tk.Label(frame, text="⚠️ Боль

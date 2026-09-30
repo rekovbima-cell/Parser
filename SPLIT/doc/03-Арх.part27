@@ -1,0 +1,31 @@
+       <i data-lucide="scan" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                  <h4 class="text-base font-semibold text-accent-700 dark:text-accent-300" data-ref="https://github.com/rahilcodz/browser-path-detector|51">browser-path-detector</h4>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 text-sm">
+                  Скрипт на чистом Python, использующий модули os и subprocess для автоматического обнаружения установленных путей к браузерам в системе. Разработан для интеграции в рабочие процессы автоматизации для таких инструментов, как Selenium или PyAutoGUI.
+                </p>
+              </div>
+
+              <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+                <div class="flex items-center space-x-3 mb-4">
+                  <i data-lucide="package" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                  <h4 class="text-base font-semibold text-primary-700 dark:text-primary-300" data-ref="https://github.com/roniemartinez/browsers|9">roniemartinez/browsers</h4>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 text-sm">
+                  Библиотека Python для обнаружения и запуска браузеров, позволяющая автоматически определять установленные браузеры на машине macOS, что является ключевым элементом для интеграции внешних исполняемых файлов.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Conclusion Section -->
+    <section id="conclusion" class="py-20 bg-primary-50/50 dark:bg-gray-800" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-primary-700 dark:text-primary-300">
+          Заключение и рекомендации
+        </h2>
+
+        <div class="space-

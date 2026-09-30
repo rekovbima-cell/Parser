@@ -1,0 +1,33 @@
+TXT", doc:"DOCX", md:"Markdown" };
+
+const BLOCKED_MARKERS = [
+  "just a moment","checking your browser","attention required","access denied",
+  "are you a robot","captcha","cloudflare","rate limit exceeded","403 forbidden",
+  "request blocked","unusual traffic","verify you are human","bot detection"
+];
+
+const USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+];
+const UA_SHORT = ["Chrome 148 · Win10","Chrome 148 · macOS","Chrome 148 · Linux","Chrome 147 · Win10"];
+
+const LOCALE_TZ_PAIRS = [
+  ["en-US","America/New_York"],["en-US","America/Los_Angeles"],
+  ["en-US","America/Chicago"],["en-GB","Europe/London"]
+];
+const VIEWPORTS = ["1920×1080","1536×864","1440×900","1366×768"];
+
+const FETCH_NODES = [
+  { id:"allorigins", label:"allorigins", build:u=>`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, json:true, contentKey:"contents", statusKey:["status","http_status_code"] },
+  { id:"codetabs",   label:"codetabs",   build:u=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, json:false },
+  { id:"corsproxy",  label:"corsproxy",  build:u=>`https://corsproxy.io/?url=${encodeURIComponent(u)}`, json:false },
+  { id:"thingproxy", label:"thingproxy", build:u=>`https://thingproxy.freeboard.io/fetch/${u}`, json:false }
+];
+
+/* ============================== helpers ============================== */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const rnd = (a,b) => a + Math.rando

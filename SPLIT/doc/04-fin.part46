@@ -1,0 +1,47 @@
+IR, f"MEGATANK{now_stamp()}")
+        try:
+            os.makedirs(outdir, existok=True)
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось создать папку результата:\n{e}")
+            return
+        self.lastoutputdir = out_dir
+
+        settings = {
+            "fmt": FORMATMAP.get(self.fmtlabel.get(), "md"),
+            "merge": bool(self.merge.get()),
+            "aggressive": bool(self.aggr.get()),
+            "stealth": bool(self.stealth.get()),
+            "concurrency": self._spin(self.concurrency, 1, 1, 5),
+            "retries": self._spin(self.retries, 1, 0, 3),
+            "externalbrowser": self.selectedbrowser.get(),
+            "customprofilepath": profile_path or None,
+            "useprofile": useprofile,
+            "attach_cdp": attach,
+            "cdpport": self.spin(self.cdp_port, 9222, 1024, 65535),
+            "headless": bool(self.headless.get()),
+            "copyprofile": bool(self.copyprofile.get()),
+            "exportstorage": bool(self.exportstorage.get()),
+        }
+
+        if attach and settings["headless"]:
+            settings["headless"] = False
+            self.headless.set(False)
+            self.log("ℹ️ CDP-подключение к живому браузеру → headless выключен", "info")
+
+        self.stop_event.clear()
+        self.is_running = True
+        self.btn.config(state="disabled", text="⏳ РАБОТАЮ...")
+        self.stop_btn.config(state="normal", text="⛔ СТОП")
+        self.folder_btn.config(state="disabled")
+        self.log_buffer.clear()
+        self.log_text.config(state="normal")
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.config(state="disabled")
+        self.set_progress(0)
+        self.set_stats(0, 0, 0)
+
+        threading.Thread(target=self.coordinator, args=(validurls, out_dir, settings),
+                         daemon=True).start()
+
+    def stop(self):
+        if not self.

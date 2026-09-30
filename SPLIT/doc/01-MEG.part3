@@ -1,0 +1,59 @@
+=====================================================================
+class AutoInstaller:
+    def __init__(self):
+        self.missing = []
+        self.installed = []
+
+    def check(self, pkg, imp):
+        try:
+            importlib.import_module(imp)
+            self.installed.append(pkg)
+            return True
+        except ImportError:
+            self.missing.append(pkg)
+            return False
+
+    def install(self, pkg):
+        print(f"📦 Установка {pkg}...")
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", pkg, "--quiet", "--upgrade"]
+            )
+            print(f"   ✅ {pkg}")
+            return True
+        except Exception as e:
+            print(f"   ❌ {pkg}: {e}")
+            return False
+
+    def chromium_ready(self):
+        """Проверяет, действительно ли Chromium доступен Playwright'у (а не просто
+        что пакет playwright импортируется — браузер мог быть не докачан)."""
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                browser.close()
+            return True
+        except Exception:
+            return False
+
+    def install_browsers(self):
+        print("🌐 Установка браузера Chromium для Playwright...")
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "playwright", "install", "chromium"]
+            )
+            print("   ✅ Chromium установлен")
+            return True
+        except Exception as e:
+            print(f"   ⚠️ Не удалось установить Chromium: {e}")
+            return False
+
+    def run(self):
+        print("=" * 70)
+        print(f"🔍 {APP_NAME} v{APP_VERSION} — ПРОВЕРКА ЗАВИСИМОСТЕЙ")
+        print("=" * 70)
+
+        for pkg, imp in REQUIRED_PACKAGES:
+            ok = self.check(pkg, imp)
+       

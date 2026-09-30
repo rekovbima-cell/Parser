@@ -1,0 +1,47 @@
+adding:15px 20px;border-radius:8px;margin-bottom:30px;}}
+nav a{{color:#00ff88;text-decoration:none;}}
+nav a:hover{{text-decoration:underline;}}
+section{{margin-bottom:40px;}}
+.src{{color:#888;font-size:0.9em;word-break:break-all;}}
+hr{{border-color:#333;}}
+h1{{color:#00ff88;}}
+a{{color:#5aa9ff;}}
+img{{max-width:100%;height:auto;}}
+pre{{background:#111;padding:12px;border-radius:8px;overflow:auto;}}
+table{{border-collapse:collapse;}} td,th{{border:1px solid #333;padding:6px;}}
+
+📚 {APPNAME} — Сводный экспорт ({len(okresults)} источников)
+{''.join(nav_items)}
+{''.join(sections)}
+"""
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(html_doc)
+
+def mergedocx(okresults, out_path):
+    from docx import Document
+    doc = Document()
+    doc.addheading(safexmltext(f'{APPNAME} — Сводный экспорт'), 0)
+    doc.addparagraph(safexml_text(
+        f"Источников: {len(ok_results)} | Сгенерировано: "
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"))
+    for i, r in enumerate(ok_results):
+        if i > 0:
+            doc.addpagebreak()
+        doc.addheading(safexml_text(r["title"] or r["url"]), level=1)
+        doc.addparagraph(safexml_text(f"Источник: {r['url']}"))
+        for para in r.get("_text", "").split('\n'):
+            para = safexmltext(para).strip()
+            if para:
+                doc.add_paragraph(para)
+    doc.save(out_path)
+
+def writemanifestandindex(manifest, outdir, mergedfilename=None, browserinfo=None):
+    clean = [{k: v for k, v in r.items() if not k.startswith("_")} for r in manifest]
+    ok_n = sum(1 for r in clean if r["status"] == "ok")
+    totals = {
+        "sources": len(clean),
+        "ok": ok_n,
+        "failed": len(clean) - ok_n,
+        "blockedsuspected": sum(1 for r in clean if r.get("blockedsuspected")),
+        "bytes": sum(int(r.get("size_bytes") or 0) for r in clean),
+        "words": sum(int(r.get("word_count")

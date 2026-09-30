@@ -1,0 +1,32 @@
+n/version</span>.
+            </p>
+          </div>
+
+          <div class="card-interactive p-6 rounded-xl shadow-md bg-white/90 backdrop-blur-sm dark:bg-gray-900 h-80">
+            <canvas id="cdpChart"></canvas>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300">
+            Подключение к различным движкам
+          </h3>
+          
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+              <div class="flex items-center space-x-3 mb-4">
+                <i data-lucide="chrome" class="w-8 h-8 text-primary-600 dark:text-primary-400"></i>
+                <h4 class="text-lg font-semibold text-primary-700 dark:text-primary-300" data-ref="https://github.com/feder-cr/invisible_playwright/wiki/playwright-connect-over-cdp-firefox|28">Chromium</h4>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                Подключение через chromium.connect_over_cdp(http_url) к конечной точке, открытой с флагом --remote-debugging-port. Поддерживает создание новых контекстов и страниц.
+              </p>
+            </div>
+
+            <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+              <div class="flex items-center space-x-3 mb-4">
+                <i data-lucide="firefox" class="w-8 h-8 text-accent-600 dark:text-accent-400"></i>
+                <h4 class="text-lg font-semibold text-accent-700 dark:text-accent-300" data-ref="https://github.com/feder-cr/invisible_playwright/wiki/playwright-connect-over-cdp-firefox|28">Firefox</h4>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                Подключение через firefox.connect(ws_url) к

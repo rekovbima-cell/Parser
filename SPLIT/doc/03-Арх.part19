@@ -1,0 +1,28 @@
+ontent hidden w-full overflow-hidden transition-[height] duration-300" aria-labelledby="hs-profile-3">
+                  <div class="p-6 pt-0 space-y-4">
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://playwright.dev/docs/auth|37">
+                      Для сценариев параллельного тестирования, где несколько рабочих процессов работают одновременно, можно реализовать стратегию аутентификации на основе рабочих процессов. Это включает создание уникальной учетной записи для каждого рабочего процесса (используя test.info().parallelIndex) и сохранение его аутентифицированного состояния в уникальный файл в каталоге вывода рабочего процесса.
+                    </p>
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://roundproxies.com/blog/authentication-playwright/|39">
+                      Можно управлять несколькими различными ролями пользователей, создавая отдельные файлы состояния аутентификации. Например, один проект настройки может создать admin.json, а другой может создать user.json. Тесты затем могут указать, какую роль они требуют, установив опцию storageState для группы тестов или отдельного теста.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Security Section -->
+    <section id="security" class="py-20 bg-accent-50/50 dark:bg-gray-800" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-accent-700 dark:text-accent-300">
+          Безопасность и защита от обнаружения
+        </h2>
+
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
+          <div class="card-interactive p-6 bg-white/90 backdrop-blur-sm dark:bg-gray-900 rounded-xl shadow-md">
+            <div class="flex items-center space-x-4 mb-4">
+       

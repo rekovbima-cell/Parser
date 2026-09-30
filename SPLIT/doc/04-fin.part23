@@ -1,0 +1,45 @@
+.get("externalbrowser", SYSTEMBROWSER),
+            profilepath=settings.get("customprofile_path") or "",
+            useprofile=bool(settings.get("useprofile")),
+            attachcdp=bool(settings.get("attachcdp")),
+            cdpport=int(settings.get("cdpport", 9222)),
+            headless=bool(settings.get("headless", True)),
+            copyprofile=bool(settings.get("copyprofile")),
+            logcb=logcb,
+        )
+        plan["headless"] = bool(settings.get("headless", True))
+    if plan is None:
+        plan = {"mode": "bundled", "engine": "chromium", "channel": None,
+                "executablepath": None, "args": buildlaunch_args("en-US"),
+                "userdatadir": None, "cdpurl": None, "ownsbrowser": True,
+                "ownscontext": True, "label": SYSTEMBROWSER, "headless": True,
+                "serial": False, "warnings": [], "profileiscopy": False}
+
+    result["session_mode"] = plan["mode"]
+    result["engine"] = plan["engine"]
+    result["browser"] = plan["label"]
+    for w in plan.get("warnings", []):
+        log_cb(f"   ℹ️ {w}")
+
+    serial = bool(plan.get("serial"))
+    stealth_on = bool(settings.get("stealth", True)) and plan["mode"] not in ("persistent", "cdp")
+
+    for attempt in range(1, max_attempts + 1):
+        if stop():
+            lasterror = lasterror or "остановлено пользователем"
+            break
+        result["attempts"] = attempt
+        ua = random_ua()
+        locale, tz = randomlocaletz()
+        viewport = random.choice(VIEWPORTS)
+        saved = False
+        session = None
+
+        try:
+            from playwright.syncapi import syncplaywright
+            with sync_playwright() as p:
+                if serial:
+                    PROFILE_LOCK.acquire()
+                try:
+                    session = openwith_fallback(p, plan, ua, locale, tz, viewport,
+                                                  stealthon, l

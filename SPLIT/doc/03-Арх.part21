@@ -1,0 +1,26 @@
+ion-with-playwright-stealth|44">
+                Обнаружение Playwright
+              </h3>
+            </div>
+            <p class="text-gray-700 dark:text-gray-300 text-sm mb-4">
+              Playwright может быть обнаружен и заблокирован технологиями анти-бот, потому что он автоматически изменяет специальные свойства и заголовки при управлении headless-браузерами. Ключевой пример - установка настройки Chrome navigator.webdriver в true, которую решения обнаружения ботов анализируют для идентификации автоматизированных скриптов.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Пакет playwright-stealth - расширение для Playwright, предназначенное для переопределения конкретных конфигураций для избежания обнаружения ботов. Он удаляет свойство navigator.webdriver и убирает строку "HeadlessChrome" из заголовка User-Agent.
+            </p>
+          </div>
+        </div>
+
+        <div class="space-y-6">
+          <h3 class="text-2xl font-semibold text-accent-700 dark:text-accent-300">
+            Механизмы защиты от обнаружения
+          </h3>
+
+          <div class="grid md:grid-cols-3 gap-6">
+            <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+              <div class="flex items-center space-x-3 mb-4">
+                <i data-lucide="palette" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                <h4 class="text-base font-semibold text-accent-700 dark:text-accent-300" data-ref="https://botbrowser.io/en/blog/what-is-browser-fingerprinting/|33">Спуфинг отпечатков</h4>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                BotBrowser обеспечивает комплексную защиту от отпечатков, контролируя сигналы на уровне движка через полные профили устройств. Этот подход настраивает каждую подсистему одновреме

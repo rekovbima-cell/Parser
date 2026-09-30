@@ -1,0 +1,43 @@
+             context = browser.new_context(
+                        viewport=viewport,
+                        user_agent=ua,
+                        extra_http_headers=build_headers(ua, locale),
+                        locale=locale,
+                        timezone_id=tz,
+                        device_scale_factor=1,
+                        permissions=["notifications"],
+                    )
+
+                # Применение stealth только для Chromium, так как Firefox имеет другую архитектуру
+                if (ext_browser_name == "System Default (Playwright Bundled)" or 
+                    (browser_manager and browser_manager.discovered_browsers and 
+                     next((b for b in browser_manager.discovered_browsers if b["name"] == ext_browser_name), {}).get("engine") == "chromium")):
+                    context.add_init_script(build_stealth_script(ua, locale))
+
+                page = context.new_page()
+
+                response = page.goto(url, wait_until="domcontentloaded", timeout=goto_timeout)
+
+                try:
+                    page.wait_for_load_state("networkidle", timeout=net_timeout)
+                except Exception:
+                    pass
+                try:
+                    page.wait_for_load_state("load", timeout=4000)
+                except Exception:
+                    pass
+
+                page.wait_for_timeout(random.randint(150, 350) if aggressive else random.randint(400, 900))
+                dismiss_overlays(page)
+                autoscroll(page, steps=4 if aggressive else 6, pause_ms=200 if aggressive else 350)
+
+                try:
+                    title = page.title()
+                except Exception:
+                    title = ""
+                result["title"] = title
+
+                status_code = response.status if response else None
+                body_sample = ""
+                try:
+                    body_sam

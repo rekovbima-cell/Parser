@@ -1,0 +1,52 @@
+        if new_list:
+            self.selected_browser.set(new_list[0])
+        self.log("🔄 Список браузеров обновлен")
+
+    def browse_profile(self):
+        path = filedialog.askdirectory(title="Выберите папку профиля браузера")
+        if path:
+            self.profile_path_var.set(path)
+
+    # ---------------- UI helpers (потокобезопасные) ----------------
+    def log(self, msg):
+        self.ui_q.put(("log", msg))
+
+    def set_progress(self, pct):
+        self.ui_q.put(("progress", pct))
+
+    def set_stats(self, ok, fail, blocked=0):
+        self.ui_q.put(("stats", (ok, fail, blocked)))
+
+    def _poll_ui(self):
+        try:
+            while True:
+                kind, payload = self.ui_q.get_nowait()
+                if kind == "log":
+                    self.log_buffer.append(str(payload))
+                    if len(self.log_buffer) > 20000:
+                        del self.log_buffer[:5000]
+                    self.log_text.config(state="normal")
+                    self.log_text.insert(tk.END, str(payload) + "\n")
+                    self.log_text.see(tk.END)
+                    self.log_text.config(state="disabled")
+                elif kind == "progress":
+                    self.progress.set(payload)
+                elif kind == "stats":
+                    ok, fail, blocked = payload
+                    self.ok_label.config(text=f"✅ {ok}")
+                    self.fail_label.config(text=f"❌ {fail}")
+                    self.blk_label.config(text=f"⚠️ {blocked}")
+                elif kind == "done":
+                    self._on_finished(payload)
+        except queue.Empty:
+            pass
+        try:
+            self.root.after(80, self._poll_ui)
+        except tk.TclError:
+            pass
+
+    def copy_log(self):
+        try:
+            text = self.log_text.get("1.0", tk.END).strip()
+            self.root.clipboard_clear()
+            self.root.clipboa

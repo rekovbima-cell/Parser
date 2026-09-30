@@ -1,0 +1,32 @@
+=0, columnspan=4,
+                                                   sticky="w", padx=5, pady=2)
+
+        self.attach_cdp = tk.BooleanVar(value=False)
+        tk.Checkbutton(bframe, text="🔌 Подключаться к УЖЕ ЗАПУЩЕННОМУ браузеру (CDP)",
+                       variable=self.attach_cdp, bg="#252540", fg="#5aa9ff",
+                       selectcolor="#252540", font=("Segoe UI", 9, "bold"),
+                       command=self.oncdp_toggle).grid(row=4, column=0, columnspan=3,
+                                                         sticky="w", padx=5, pady=2)
+
+        tk.Label(bframe, text="CDP-порт:", bg="#252540", fg="white").grid(
+            row=4, column=3, sticky="e", padx=(5, 0), pady=2)
+        self.cdp_port = tk.IntVar(value=9222)
+        tk.Spinbox(bframe, from=1024, to=65535, textvariable=self.cdpport, width=6,
+                   bg="#1e1e1e", fg="#00ff88", insertbackground="#00ff88",
+                   buttonbackground="#1e1e1e", relief="flat").grid(
+            row=5, column=3, sticky="e", padx=5, pady=2)
+
+        self.headless = tk.BooleanVar(value=True)
+        tk.Checkbutton(bframe, text="🙈 Headless (скрывать окно браузера)",
+                       variable=self.headless, bg="#252540", fg="#cccccc",
+                       selectcolor="#252540").grid(row=6, column=0, columnspan=2,
+                                                   sticky="w", padx=5, pady=2)
+
+        self.export_storage = tk.BooleanVar(value=False)
+        tk.Checkbutton(bframe, text="🍪 Экспортировать storage_state.json в папку результата",
+                       variable=self.export_storage, bg="#252540", fg="#cccccc",
+                       selectcolor="#252540").grid(row=6, column=2, columnspan=2,
+                                                   sticky="w", padx=5, pady=2)
+
+        brow_btns = tk.Frame(bframe, bg="#252540")
+        brow_btns.grid(row=7, column=0, columnspan=4, sticky="

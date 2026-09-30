@@ -1,0 +1,19 @@
+d-xl" id="hs-profile-2">
+                  <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-accent-100 dark:bg-accent-900/30 rounded-lg flex items-center justify-center">
+                      <i data-lucide="shield-check" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                    </div>
+                    <span class="font-semibold text-lg text-accent-700 dark:text-accent-300">Защита аутентификационных данных</span>
+                  </div>
+                  <i data-lucide="chevron-down" class="hs-accordion-active:rotate-180 transition-transform duration-300 w-5 h-5 text-accent-600 dark:text-accent-400"></i>
+                </button>
+                <div id="hs-collapse-profile-2" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300" aria-labelledby="hs-profile-2">
+                  <div class="p-6 pt-0 space-y-4">
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://playwright.dev/python/docs/auth|36">
+                      По соображениям безопасности рекомендуется хранить файлы состояния аутентификации в выделенном каталоге (например, playwright/.auth) и добавлять этот каталог в .gitignore, чтобы предотвратить фиксацию конфиденциальной информации, такой как cookies и заголовки.
+                    </p>
+                    <p class="text-gray-700 dark:text-gray-300" data-ref="https://roundproxies.com/blog/authentication-playwright/|39">
+                      Файлы состояния аутентификации содержат активные токены сессии, которые никогда не должны фиксироваться в системе контроля версий. Их следует хранить в каталоге (например, .auth), который явно добавлен в файл .gitignore.
+                    </p>
+                    
+                    <div class="pl-4 pr-3 py-3 border-l-4 border-amber-500 bg-amber-50/40 dark:bg-amber-900/30

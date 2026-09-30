@@ -1,0 +1,48 @@
+", "America/Los_Angeles"),
+    ("en-US", "America/Chicago"),
+    ("en-GB", "Europe/London"),
+]
+
+VIEWPORTS = [
+    {"width": 1920, "height": 1080},
+    {"width": 1536, "height": 864},
+    {"width": 1440, "height": 900},
+    {"width": 1366, "height": 768},
+]
+
+HARDWARE_PROFILES = [(8, 8), (12, 8), (4, 4), (16, 8), (8, 4)]
+
+PATH_LOCK = threading.Lock()
+RESERVED_PATHS = set()
+Один user-data-dir / один живой браузер не выдерживают двух процессов сразу.
+PROFILE_LOCK = threading.RLock()
+
+CONTENT_SELECTOR = ("article, main, [role='main'], .article, .post, "
+                    ".entry-content, .post-content, .content")
+
+JUNK_SELECTOR = ("script, style, noscript, template, svg, canvas, iframe, nav, header, "
+                 "footer, aside, [aria-hidden=\"true\"], [role=\"navigation\"], "
+                 "[role=\"banner\"], [role=\"contentinfo\"], .cookie, .cookies, .consent, "
+                 ".popup, .modal, .advert, .ads, .ad, .social-share")
+
+Что НЕ копируем в изолированную копию профиля
+PROFILEIGNORE = shutil.ignorepatterns(
+    "Cache", "Code Cache", "GPUCache", "DawnCache", "ShaderCache", "GrShaderCache",
+    "Service Worker", "CacheStorage", "componentcrxcache", "extensionscrxcache",
+    "Singleton", ".lock", "lockfile", "parent.lock", ".parentlock",
+    "Crashpad", "Crash Reports", "blobstorage", "optimizationguide_*",
+)
+
+==============================================================================
+STEALTH (Blink) + PREFS (Gecko)
+==============================================================================
+STEALTH_TEMPLATE = r"""
+(() => {
+    const LANGS    = LANGS;
+    const PLATFORM = PLATFORM;
+    const HW       = HW;
+    const MEM      = MEM;
+
+    try { delete Object.getPrototypeOf(navigator).webdriver; } catch (e) {}
+    try { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'pla

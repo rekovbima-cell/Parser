@@ -1,0 +1,36 @@
+Count);
+  $("#btnSample").addEventListener("click", () => {
+    $("#urls").value = ["https://en.wikipedia.org/wiki/Web_scraping", "https://en.wikipedia.org/wiki/Parser_(disambiguation)", "https://example.com"].join("\n");
+    updCount();
+  });
+  $("#btnDedupe").addEventListener("click", () => {
+    const seen = new Set(), out = [];
+    readUrls().forEach(u => { const k = u.toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push(u); } });
+    $("#urls").value = out.join("\n"); updCount();
+    toast("Дубликаты удалены", out.length + " ссылок");
+  });
+  $("#btnNormalize").addEventListener("click", () => {
+    $("#urls").value = readUrls().map(normalizeUrl).join("\n"); updCount();
+  });
+  $("#btnClearUrls").addEventListener("click", () => { $("#urls").value = ""; updCount(); });
+  $("#btnStart").addEventListener("click", run);
+  $("#btnStop").addEventListener("click", () => { state.stopReq = true; setPhase("stopping"); });
+  const logBtns = $$(".logbar button");
+  logBtns.forEach(b => b.addEventListener("click", () => {
+    logFilter = b.dataset.filter || "all";
+    logBtns.forEach(x => x.classList.toggle("on", x === b));
+    rebuildLog();
+  }));
+  $("#btnAuto").addEventListener("click", () => {
+    autoScroll = !autoScroll;
+    $("#btnAuto").classList.toggle("on", autoScroll);
+  });
+  $("#btnCopyLog").addEventListener("click", () => {
+    const txt = logLines.map(l => "[" + l.t + "] " + l.msg).join("\n");
+    if(navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast("Журнал скопирован", logLines.length + " строк"));
+  });
+  $("#btnClearLog").addEventListener("click", () => { logLines = []; rebuildLog(); });
+  $("#btnZip").addEventListener("click", downloadZip);
+  $("#btnMerged").addEventListener("click", downloadMerged);
+  $("#btnManifest").addEventListener("click", () => {
+    download("manifest_" + state.stamp + ".json", JSON.stringify(manifestObj(), n

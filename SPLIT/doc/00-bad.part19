@@ -1,0 +1,49 @@
+m()*(b-a);
+const ri  = (a,b) => Math.floor(rnd(a,b+1));
+const pick = arr => arr[ri(0,arr.length-1)];
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+function sanitize(name){
+  name = name.replace(/^https?:\/\//,"").replace(/[^\w\-_.]/g,"_").replace(/^_+|_+$/g,"");
+  while(name.includes("__")) name = name.split("__").join("_");
+  return (name || "page").slice(0,100);
+}
+function slugify(text){
+  const t = String(text||"").trim().toLowerCase().replace(/[^\w\-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"");
+  return t.slice(0,60) || "source";
+}
+function humanSize(n){
+  n = Number(n)||0;
+  const u = ["Б","КБ","МБ","ГБ"];
+  for(let i=0;i<u.length;i++){
+    if(n < 1024) return (u[i]==="Б" ? Math.round(n) : n.toFixed(1)) + " " + u[i];
+    n /= 1024;
+  }
+  return n.toFixed(1)+" ТБ";
+}
+function nowStamp(){
+  const d = new Date(), p = x => String(x).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
+function clockTime(){
+  const d = new Date(), p = x => String(x).padStart(2,"0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+function isoNow(){
+  const d = new Date(), p = x=>String(x).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+function escapeHtml(s){
+  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function absUrl(href, base){
+  if(!href) return "";
+  try{ return new URL(href, base).href; }catch(e){ return href; }
+}
+function looksBlocked(title, sample){
+  const hay = `${title||""} ${sample||""}`.toLowerCase();
+  return BLOCKED_MARKERS.some(m => hay.includes(m));
+}
+function blobSize(str){ return new Blob([str]).size; }
+
+/* ============================== logging ===================

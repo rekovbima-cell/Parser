@@ -1,0 +1,39 @@
+uests)...")
+            ua = random_ua()
+            raw_html, status_code = fetch_via_requests(url, build_headers(ua))
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(raw_html, "html.parser")
+            for tag in soup(["script", "style", "noscript", "template", "svg", "iframe",
+                             "nav", "header", "footer", "aside"]):
+                tag.decompose()
+            title = soup.title.get_text(strip=True) if soup.title else ""
+            result["title"] = title
+
+            if fmt == "html":
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(raw_html)
+            elif fmt == "txt":
+                text_content = soup.get_text("\n", strip=True)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(text_content)
+                result["word_count"] = len(text_content.split())
+                result["_text"] = text_content
+            elif fmt == "md":
+                md_text = html_to_markdown(raw_html, url)
+                full_md = f"# {title or url}\n\nИсточник: {url}\n\n---\n\n" + md_text
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(full_md)
+                result["word_count"] = len(full_md.split())
+                result["_text"] = full_md
+            elif fmt == "docx":
+                from docx import Document
+                text_content = soup.get_text("\n", strip=True)
+                doc = Document()
+                doc.add_heading(title or url, 0)
+                doc.add_paragraph(f"Источник: {url} (запасной метод)")
+                for para in text_content.split('\n'):
+                    if para.strip():
+                        doc.add_paragraph(para.strip())
+                doc.save(file_path)
+                result["word_count"] = len(text_content.split())
+                

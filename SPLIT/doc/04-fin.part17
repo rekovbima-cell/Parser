@@ -1,0 +1,52 @@
+       try:
+            importlib.import_module(imp)
+            self.installed.append(pkg)
+            return True
+        except ImportError:
+            self.missing.append(pkg)
+            return False
+
+    def _pip(self, args, quiet=True):
+        cmd = [sys.executable, "-m", "pip"] + args
+        if quiet:
+            return subprocess.check_call(cmd, stdout=subprocess.DEVNULL,
+                                         stderr=subprocess.DEVNULL,
+                                         creationflags=CREATENOWINDOW)
+        return subprocess.checkcall(cmd, creationflags=CREATENO_WINDOW)
+
+    def install(self, pkg):
+        print(f"📦 Установка {pkg}...")
+        base = ["install", pkg, "--upgrade", "--disable-pip-version-check", "--quiet"]
+        for attempt in (base, base + ["--user"]):
+            try:
+                self._pip(attempt)
+                print(f"   ✅ {pkg}")
+                return True
+            except Exception:
+                continue
+        try:
+            self._pip(["install", pkg, "--upgrade"], quiet=False)
+            print(f"   ✅ {pkg}")
+            return True
+        except Exception as e:
+            print(f"   ❌ {pkg}: {e}")
+            return False
+
+    def chromium_ready(self):
+        try:
+            from playwright.syncapi import syncplaywright
+            with sync_playwright() as p:
+                b = launchchromiumfallback(p, buildlaunchargs("en-US"))
+                b.close()
+            return True
+        except Exception:
+            return False
+
+    def install_browsers(self, what="chromium"):
+        print(f"🌐 Установка браузера {what} для Playwright...")
+        for extra in ([], ["--with-deps"]):
+            try:
+                subprocess.check_call(
+                    [sys.executable, "-m", "playwright", "install", what] + extra,
+                    creationflags=CREATENOWINDOW)
+                print(f"   ✅ {wh

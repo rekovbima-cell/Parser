@@ -1,0 +1,52 @@
+mut")
+
+    # ---------------- UI helpers (потокобезопасные) ----------------
+    def log(self, msg, level="mut"):
+        self.ui_q.put(("log", (str(msg), level)))
+
+    def set_progress(self, pct):
+        self.ui_q.put(("progress", pct))
+
+    def set_stats(self, ok, fail, blocked=0):
+        self.ui_q.put(("stats", (ok, fail, blocked)))
+
+    def pollui(self):
+        try:
+            while True:
+                kind, payload = self.uiq.getnowait()
+                if kind == "log":
+                    text, level = payload
+                    self.log_buffer.append(text)
+                    if len(self.log_buffer) > 20000:
+                        del self.log_buffer[:5000]
+                    self.log_text.config(state="normal")
+                    self.log_text.insert(tk.END, text + "\n", level)
+                    self.log_text.see(tk.END)
+                    self.log_text.config(state="disabled")
+                elif kind == "progress":
+                    self.progress.set(payload)
+                elif kind == "stats":
+                    ok, fail, blocked = payload
+                    self.ok_label.config(text=f"✅ {ok}")
+                    self.fail_label.config(text=f"❌ {fail}")
+                    self.blk_label.config(text=f"⚠️ {blocked}")
+                elif kind == "done":
+                    self.onfinished(payload)
+        except queue.Empty:
+            pass
+        try:
+            self.root.after(80, self.pollui)
+        except tk.TclError:
+            pass
+
+    def copy_log(self):
+        try:
+            self.root.clipboard_clear()
+            self.root.clipboardappend(self.logtext.get("1.0", tk.END).strip())
+            self.log("📋 Журнал скопирован в буфер обмена", "info")
+        except Exception as e:
+            self.log(f"⚠️ не удалось скопировать: {e}", "warn")
+
+    def clear_log(self):
+        self.log_buffer.clear()
+        self.log_text.co

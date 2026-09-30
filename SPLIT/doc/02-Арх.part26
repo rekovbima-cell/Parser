@@ -1,0 +1,39 @@
+ in ct.lower():
+                            data = fetch_bytes(url, build_headers(ua, locale))
+                            with open(file_path, "wb") as f:
+                                f.write(data)
+                            result["method"] = "binary-download"
+                            pdf_ok = True
+                        if not pdf_ok:
+                            raise RuntimeError("не удалось отрендерить PDF этой страницы")
+
+                elif fmt == "html":
+                    content = page.content()
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(content)
+
+                elif fmt == "txt":
+                    text_content = extract_page_text(page)
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(text_content)
+                    result["word_count"] = len(text_content.split())
+                    result["_text"] = text_content
+
+                elif fmt == "md":
+                    content = extract_page_html(page)
+                    md_text = html_to_markdown(content, url)
+                    header = f"# {title or url}\n\nИсточник: {url}\n\n---\n\n"
+                    full_md = header + md_text
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(full_md)
+                    result["word_count"] = len(full_md.split())
+                    result["_text"] = full_md
+
+                elif fmt == "docx":
+                    from docx import Document
+                    text_content = extract_page_text(page)
+                    doc = Document()
+                    doc.add_heading(safe_xml_text(title or url), 0)
+                    doc.add_paragraph(safe_xml_text(f"Источник: {url}"))
+                    doc.add_paragraph(safe_xml_text(
+                        f"Сохранено: {datetime.now().strftime('%Y-%

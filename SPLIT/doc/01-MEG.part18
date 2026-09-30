@@ -1,0 +1,30 @@
+2d44", font=("Segoe UI", 9, "bold")).grid(row=1, column=0, columnspan=4, pady=(8, 3), sticky="w")
+
+        tk.Label(frame, text="Потоков параллельно:", bg="#2d2d44", fg="white").grid(row=2, column=0, sticky="w", padx=5, pady=3)
+        self.concurrency = tk.IntVar(value=1)
+        tk.Spinbox(frame, from_=1, to=5, textvariable=self.concurrency, width=5,
+                   bg="#1e1e1e", fg="#00ff88", buttonbackground="#1e1e1e").grid(row=2, column=1, sticky="w", padx=5, pady=3)
+
+        tk.Label(frame, text="Повторов при ошибке:", bg="#2d2d44", fg="white").grid(row=2, column=2, sticky="w", padx=5, pady=3)
+        self.retries = tk.IntVar(value=1)
+        tk.Spinbox(frame, from_=0, to=3, textvariable=self.retries, width=5,
+                   bg="#1e1e1e", fg="#00ff88", buttonbackground="#1e1e1e").grid(row=2, column=3, sticky="w", padx=5, pady=3)
+
+        tk.Label(frame, text="⚠️ Больше потоков = быстрее, но выше риск блокировки на одном домене",
+                 bg="#2d2d44", fg="#999999", font=("Segoe UI", 8)).grid(row=3, column=0, columnspan=4, sticky="w", padx=5, pady=(4, 0))
+
+        # --- Кнопки ---
+        btn_row = tk.Frame(root, bg="#12121f")
+        btn_row.pack(fill="x", padx=20, pady=8)
+        self.btn = tk.Button(btn_row, text="🚀 НАЧАТЬ", command=self.start,
+                             bg="#00aa44", fg="white", font=("Segoe UI", 12, "bold"))
+        self.btn.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        self.stop_btn = tk.Button(btn_row, text="⛔ СТОП", command=self.stop, state="disabled",
+                                   bg="#aa2222", fg="white", font=("Segoe UI", 12, "bold"))
+        self.stop_btn.pack(side="left", fill="x", expand=True, padx=(5, 0))
+
+        # --- Прогресс ---
+        self.progress = tk.DoubleVar()
+        ttk.Progressbar(root, variable=self.progress, maximum=100, style="TProgressbar").pack(fill="x", padx=20, pady=5)
+
+   

@@ -1,0 +1,38 @@
+config["paths"]:
+                                    alt_profile = os.path.join(root, p, "..", config["default_profile"])
+                                    if os.path.exists(alt_profile):
+                                        profile_path = alt_profile
+                                        break
+                            
+                            found[name] = {
+                                "name": name,
+                                "exe": exe_path,
+                                "engine": config["engine"],
+                                "profile_dir": profile_path if os.path.exists(profile_path) else None,
+                                "base_dir": root
+                            }
+        self.discovered_browsers = list(found.values())
+        if self.log_cb:
+            self.log_cb(f"🔍 Найдено портативных браузеров: {len(self.discovered_browsers)}")
+
+    def get_browser_list(self):
+        """Возвращает список доступных браузеров для GUI."""
+        return [b["name"] for b in self.discovered_browsers] + ["System Default (Playwright Bundled)"]
+
+    def launch_or_connect(self, browser_name, profile_path=None, headless=True, cdp_port=9222):
+        """
+        Запускает браузер или подключается к существующему инстансу.
+        Возвращает объект browser_type и kwargs для launch/connect.
+        """
+        if browser_name == "System Default (Playwright Bundled)":
+            return None, None # Используем стандартную логику Playwright
+
+        browser_config = next((b for b in self.discovered_browsers if b["name"] == browser_name), None)
+        if not browser_config:
+            raise FileNotFoundError(f"Браузер {browser_name} не найден.")
+
+        engine = browser_config["engine"]
+        exe_path = browser_config["exe"]
+        
+        # Если профиль не указан явно, используем найденный при сканировании
+        if not profile_path and browser_

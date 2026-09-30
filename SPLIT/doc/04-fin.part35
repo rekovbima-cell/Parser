@@ -1,0 +1,33 @@
+              "не применяется к реальному профилю",
+                       variable=self.stealth, bg="#2d2d44", fg="#cccccc",
+                       selectcolor="#2d2d44").grid(row=2, column=0, columnspan=4, sticky="w")
+
+        tk.Label(frame, text="Потоков:", bg="#2d2d44", fg="white").grid(
+            row=3, column=0, sticky="w", padx=5, pady=3)
+        self.concurrency = tk.IntVar(value=1)
+        tk.Spinbox(frame, from_=1, to=5, textvariable=self.concurrency, width=5,
+                   bg="#1e1e1e", fg="#00ff88", insertbackground="#00ff88",
+                   buttonbackground="#1e1e1e", relief="flat").grid(
+            row=3, column=1, sticky="w", padx=5, pady=3)
+
+        tk.Label(frame, text="Повторов:", bg="#2d2d44", fg="white").grid(
+            row=3, column=2, sticky="w", padx=5, pady=3)
+        self.retries = tk.IntVar(value=1)
+        tk.Spinbox(frame, from_=0, to=3, textvariable=self.retries, width=5,
+                   bg="#1e1e1e", fg="#00ff88", insertbackground="#00ff88",
+                   buttonbackground="#1e1e1e", relief="flat").grid(
+            row=3, column=3, sticky="w", padx=5, pady=3)
+
+        # --- Браузер и профиль ---
+        bframe = tk.LabelFrame(root, text="🌐 Браузер, профиль и сессия",
+                               font=("Segoe UI", 10, "bold"), padx=10, pady=8,
+                               bg="#252540", fg="white")
+        bframe.pack(fill="x", padx=20, pady=6)
+
+        tk.Label(bframe, text="Браузер:", bg="#252540", fg="white").grid(
+            row=0, column=0, sticky="w", padx=5, pady=4)
+        browserlist = self.browsermanager.getbrowserlist()
+        self.selectedbrowser = tk.StringVar(value=browserlist[0])
+        self.browsercombo = ttk.Combobox(bframe, textvariable=self.selectedbrowser,
+                                          values=browser_list, state="readonly", width=34)
+        self.browser_combo.grid(row=0, column=

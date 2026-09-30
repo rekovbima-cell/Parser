@@ -1,0 +1,28 @@
+    <div class="pl-4 pr-3 py-3 border-l-4 border-amber-500 bg-amber-50/40 dark:bg-amber-900/30 rounded-r-lg">
+            <p class="text-sm font-medium text-amber-900 dark:text-amber-100 leading-relaxed" data-ref="https://scrapfly.io/blog/posts/playwright-stealth-bypass-bot-detection|45">
+              <i data-lucide="triangle-alert" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+              Ограничения: Эффективность плагинов скрытности ограничена; они не решают проблемы репутации IP, отпечатков TLS, JavaScript-вызовов от продвинутых систем анти-бот или поведенческого анализа на основе пользовательских взаимодействий.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Integration Section -->
+    <section id="integration" class="py-20 bg-white/80 dark:bg-gray-900" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-primary-700 dark:text-primary-300">
+          Интеграция в MEGA TANK v3.0
+        </h2>
+
+        <div class="space-y-8">
+          <div class="grid md:grid-cols-2 gap-8 items-start">
+            <div class="space-y-6">
+              <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300" data-ref="https://mcpservers.org/servers/Rainmen-xia/chrome-debug-mcp-server|4">
+                Архитектура подключения
+              </h3>
+              <p class="text-gray-700 dark:text-gray-300">
+                Сервер Chrome Debug MCP демонстрирует автоматизацию существующего браузера Chrome путем подключения к его порту отладки (например, --remote-debugging-port=9222). Это позволяет инструментам автоматизации взять на себя сессию, в которой вошел пользователь, без необходимости для инструмента обрабатывать аутентификацию.
+              </p>
+              <p class="text-gray-700 dark:text-gray-300">
+                Архитектура подключает клиента автомати

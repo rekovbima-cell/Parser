@@ -1,0 +1,53 @@
+:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                b = p.chromium.launch(headless=True, args=['--no-sandbox'])
+                b.close()
+            return True
+        except Exception:
+            return False
+
+    def install_browsers(self):
+        print("🌐 Установка браузера Chromium для Playwright...")
+        for extra in ([], ["--with-deps"]):
+            try:
+                subprocess.check_call(
+                    [sys.executable, "-m", "playwright", "install", "chromium"] + extra,
+                    creationflags=CREATE_NO_WINDOW,
+                )
+                print("   ✅ Chromium установлен")
+                return True
+            except Exception as e:
+                print(f"   ⚠️ playwright install {' '.join(extra) or '(basic)'}: {e}")
+        return False
+
+    def run(self):
+        print("=" * 70)
+        print(f"🔍 {APP_NAME} v{APP_VERSION} — ПРОВЕРКА ЗАВИСИМОСТЕЙ")
+        print("=" * 70)
+
+        for pkg, imp in REQUIRED_PACKAGES:
+            ok = self.check(pkg, imp)
+            print(f"{'✅' if ok else '❌'} {pkg}")
+
+        if self.missing:
+            print("\n" + "=" * 70)
+            print(f"🚀 УСТАНАВЛИВАЮ {len(self.missing)} ПАКЕТ(ОВ)...")
+            print("=" * 70)
+            for p in list(self.missing):
+                if self.install(p):
+                    self.missing.remove(p)
+
+        if not self.chromium_ready():
+            print("\n" + "=" * 70)
+            print("🌐 БРАУЗЕР НЕ ГОТОВ — УСТАНАВЛИВАЮ CHROMIUM...")
+            print("=" * 70)
+            self.install_browsers()
+            if not self.chromium_ready():
+                print("   ℹ️ bundled Chromium недоступен.")
+                self.missing.append("chromium-browser")
+
+        print("\n" + "=" * 70)
+        if not self.missing:
+            print("✅ ВСЁ ГОТОВО! Запускаю интерфейс...")
+        else:

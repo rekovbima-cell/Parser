@@ -1,0 +1,39 @@
+fmt.upper()}: {humansize(size)} -> {os.path.basename(file_path)}"
+                       + (" [блокировка?]" if result["blocked_suspected"] else ""))
+                last_error = None
+                break
+
+        except Exception as e:
+            last_error = str(e)
+            logcb(f"   ⚠️ Попытка {attempt}/{maxattempts} не удалась: {last_error[:140]}")
+            low = last_error.lower()
+            if "singleton" in low or "process already running" in low or "in use" in low:
+                log_cb("   💡 Профиль уже открыт в браузере. Закройте его, "
+                       "включите «Копия профиля» или перейдите на CDP-подключение.")
+                plan = dict(plan, mode="executable", userdatadir=None, serial=False)
+                log_cb("   🔁 Переключаюсь на запуск без профиля (изолированный контекст)")
+            if attempt  0:
+                log_cb(f"   🔁 фоллбэк браузера: {variant['label']}")
+            return session
+        except Exception as e:
+            last = e
+            msg = str(e)
+            log_cb(f"   ⚠️ {variant['label']}: {msg[:130]}")
+            low = msg.lower()
+            if "executable doesn't exist" in low or "install" in low:
+                log_cb("   💡 выполни: python -m playwright install "
+                       f"{variant.get('engine', 'chromium')}")
+    raise last or RuntimeError("ни один браузер не запустился")
+
+def cleanforprint(htmlfragment, baseurl):
+    """Лёгкая чистка HTML перед печатью в PDF (убираем скрипты и мусор)."""
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html_fragment, "html.parser")
+    for tag in soup(["script", "style", "noscript", "template", "iframe", "object", "embed"]):
+        tag.decompose()
+    absolutize(soup, base_url)
+    return str(soup)
+
+def dumpstoragestate(sessionorcontext, outdir, logcb):
+    """Сохраняет cookies/localStorage нашего контекста в storage_state.json.
+    Ра

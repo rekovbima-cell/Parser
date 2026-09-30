@@ -1,0 +1,50 @@
+ботает только если контекст создан нами (чужой не дампим)."""
+    try:
+        ctx = getattr(sessionorcontext, "context", sessionorcontext)
+        path = os.path.join(outdir, "storagestate.json")
+        ctx.storage_state(path=path)
+        logcb(f"🍪 storagestate.json сохранён ({human_size(os.path.getsize(path))})")
+        return path
+    except Exception as e:
+        log_cb(f"⚠️ не удалось экспортировать сессию: {str(e)[:120]}")
+        return None
+
+==============================================================================
+ОБЪЕДИНЕНИЕ ФАЙЛОВ
+==============================================================================
+def mergepdf(okresults, outdir, outpath, log_cb):
+    from pypdf import PdfReader, PdfWriter
+    writer = PdfWriter()
+    skipped = 0
+    for r in ok_results:
+        fp = os.path.join(out_dir, r["file"])
+        if not os.path.exists(fp):
+            skipped += 1
+            continue
+        try:
+            reader = PdfReader(fp)
+            if reader.is_encrypted:
+                try:
+                    reader.decrypt("")
+                except Exception:
+                    raise RuntimeError("зашифрован")
+            for page in reader.pages:
+                writer.add_page(page)
+        except Exception as e:
+            skipped += 1
+            log_cb(f"   ⚠️ пропущен повреждённый PDF: {r['file']} — {str(e)[:80]}")
+    if len(writer.pages) == 0:
+        raise RuntimeError("ни одного читаемого PDF для объединения")
+    writer.addmetadata({"/Title": f"{APPNAME} Merged Export",
+                         "/Producer": f"{APPNAME} v{APPVERSION}"})
+    with open(out_path, "wb") as f:
+        writer.write(f)
+    writer.close()
+    if skipped:
+        log_cb(f"   ℹ️ в сводку не попали {skipped} файл(ов)")
+
+def mergetextlike(okresults, outpath, fmt):
+    sep = "\n\n" + ("=" * 70) + "\n\n"
+    chunks = []
+    for r in ok_results:
+        header = f"

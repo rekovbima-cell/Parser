@@ -1,0 +1,26 @@
+ss="text-sm font-medium text-primary-900 dark:text-primary-100 leading-relaxed" data-ref="https://refactoring.guru/design-patterns/singleton/python/example|23">
+                <i data-lucide="info" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+                Предупреждение: Шаблон Одиночный часто считается антипаттерном в Python из-за его негативного влияния на модульность кода. Он делает классы зависимыми от конкретного глобального состояния, усложняя юнит-тестирование, поскольку зависимости нельзя легко мокать или заменить.
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300">
+              Механизмы обнаружения браузеров
+            </h3>
+
+            <div class="grid md:grid-cols-3 gap-6">
+              <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+                <div class="flex items-center space-x-3 mb-4">
+                  <i data-lucide="search" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                  <h4 class="text-base font-semibold text-primary-700 dark:text-primary-300" data-ref="https://github.com/jifengwu2k/get-chrome-paths|50">get-chrome-paths</h4>
+                </div>
+                <p class="text-gray-700 dark:text-gray-300 text-sm">
+                  Кроссплатформенная утилита Python для обнаружения установленных путей к браузерам Chrome, Chromium и Microsoft Edge на Windows, macOS и Linux. Поддерживает обнаружение через общие пути реестра на Windows, общие пути приложений на macOS и общие пути установки на Linux.
+                </p>
+              </div>
+
+              <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+                <div class="flex items-center space-x-3 mb-4">
+           

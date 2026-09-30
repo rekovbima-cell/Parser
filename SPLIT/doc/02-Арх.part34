@@ -1,0 +1,41 @@
+       self.root = root
+        self.ui_q = queue.Queue()
+        self.stop_event = threading.Event()
+        self.lock = threading.Lock()
+        self.is_running = False
+        self.last_output_dir = None
+        self.log_buffer = []
+        
+        # Инициализация менеджера браузеров
+        self.browser_manager = ExternalBrowserManager(log_cb=self.log)
+
+        root.title(f"🚀 {APP_NAME} v{APP_VERSION}")
+        root.configure(bg="#12121f")
+        root.geometry("820x950") # Увеличена высота для новых настроек
+        root.minsize(780, 720)
+        root.resizable(False, True)
+        root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+        style = ttk.Style(root)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+        style.configure("TProgressbar", troughcolor="#1e1e1e", background="#00aa44", thickness=14)
+        style.configure("TCombobox", fieldbackground="#1e1e1e", background="#1e1e1e",
+                        foreground="#ffffff", arrowcolor="#00ff88")
+        style.map("TCombobox", fieldbackground=[("readonly", "#1e1e1e")],
+                  foreground=[("readonly", "#ffffff")])
+
+        # --- Заголовок ---
+        header = tk.Frame(root, bg="#1a1a2e")
+        header.pack(fill="x")
+        tk.Label(header, text=f"🚀 {APP_NAME} v{APP_VERSION}", font=("Segoe UI", 16, "bold"),
+                 bg="#1a1a2e", fg="#00ff88", pady=8).pack()
+        tk.Label(header, text=f"Любой сайт • Любой формат • Без ключей • Параллельно • build {BUILD_DATE}",
+                 font=("Segoe UI", 10), bg="#1a1a2e", fg="#888888").pack(pady=(0, 8))
+
+        # --- URL ---
+        tk.Label(root, text="📋 URL (по одному в строке):", font=("Segoe UI", 10, "bold"),
+                 anchor="w", bg="#12121f", fg="white").pack(fill="x", padx=20, pady=(12, 4))
+        self.urls = tk.Text(root, height=7, font=("Consolas", 10), bg="#1e1e1e", fg="#00ff

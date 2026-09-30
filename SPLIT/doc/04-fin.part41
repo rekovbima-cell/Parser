@@ -1,0 +1,40 @@
+.profilepath_var.get().strip():
+                self.profilepathvar.set(cfg["profile_dir"])
+            self.log(f"ℹ️ Выбран «{cfg['name']}» · движок {cfg['engine']} · exe: {cfg['exe']}")
+            if cfg["engine"] == "firefox":
+                self.log("⚠️ Gecko: Playwright нужен патченный Firefox. Внешний скорее всего "
+                         "не запустится — сработает фоллбэк. Кнопка «Установить Firefox» ниже.", "warn")
+
+    def oncdp_toggle(self):
+        if self.attach_cdp.get():
+            self.headless.set(False)
+            self.log("🔌 CDP-режим: скрипт подключится к живому браузеру и НЕ будет его "
+                     "закрывать. Браузер должен быть запущен с --remote-debugging-port "
+                     "и отдельным --user-data-dir.", "info")
+
+    def refreshbrowserlist(self):
+        cur = self.selected_browser.get()
+        self.browsermanager.logcb = self.log
+        names = self.browser_manager.scan()
+        full = self.browsermanager.getbrowser_list()
+        self.browser_combo['values'] = full
+        self.selected_browser.set(cur if cur in full else full[0])
+        self.log(f"🔄 Список браузеров обновлён: {len(names)} найдено")
+
+    def browse_profile(self):
+        path = filedialog.askdirectory(title="Папка профиля браузера (user-data-dir)")
+        if path:
+            self.profilepathvar.set(path)
+            self.use_profile.set(True)
+            self.log(f"👤 Профиль: {path}")
+
+    def test_cdp(self):
+        port = self.spin(self.cdpport, 9222, 1024, 65535)
+        ws, ver = ExternalBrowserManager.probe_cdp(port, timeout=2.0)
+        if ws:
+            self.log(f"✅ CDP жив на 127.0.0.1:{port} → {ver}", "ok")
+            self.log(f"   ws: {ws[:90]}", "mut")
+            self.attach_cdp.set(True)
+        else:
+            self.log(f"❌ На 127.0.0.1:{port} никто не слушает. Запусти браузер так:", "err")
+            self.log(f'   chrome.exe --

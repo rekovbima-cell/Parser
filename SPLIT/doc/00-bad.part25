@@ -1,0 +1,25 @@
+(html){
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const title = (doc.title || "").trim();
+  const main = pickMain(cleanDom(doc));
+  const sample = (main && main.textContent || "").slice(0, 2000);
+  return { doc:doc, title:title, main:main, sample:sample };
+}
+
+function buildContent(url, page){
+  const fmt = state.fmt, ext = fmtExt(fmt), main = page.main, title = page.title || url;
+  if(fmt === "txt") return { title:title, ext:ext, text:extractText(main) };
+  if(fmt === "md" || fmt === "pdf") return { title:title, ext:ext, text:"# " + title + "\n\n**Source:** " + url + "\n\n---\n\n" + htmlToMarkdown(main, url) };
+  if(fmt === "html") return { title:title, ext:ext, text:"<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\"><title>" + escapeHtml(title) + "</title></head><body>\n<!-- MEGA TANK · " + escapeHtml(url) + " -->\n" + main.innerHTML + "\n</body></html>" };
+  if(fmt === "doc") return { title:title, ext:ext, text:docHtml(title, url, main.innerHTML) };
+  return { title:title, ext:ext, text:extractText(main) };
+}
+
+function docHtml(title, url, bodyHtml){
+  return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title></head><body><h1>' + escapeHtml(title) + '</h1><p><b>Source:</b> <a href="' + escapeHtml(url) + '">' + escapeHtml(url) + '</a></p>' + bodyHtml + '</body></html>';
+}
+
+function demoContent(url){
+  const ext = fmtExt(state.fmt);
+  const title = "DEMO · " + url;
+  const paras = ["Сеть недоступна или все fetch-узлы вернули ошибку — строка сгенерирована в демо-режиме, чтобы проверить пайплайн: очередь, параллельные воркеры, таблицу результатов и экспорт (ZIP / manifest / INDEX).", "Демо-режим включается переключателем «Демо-режим» и срабатывает только когда реальный запрос 

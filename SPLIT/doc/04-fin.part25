@@ -1,0 +1,36 @@
+tempt}/{max_attempts}")
+                    if plan["mode"] == "cdp" and not blocked:
+                        log_cb("   🍪 Сессия пользователя использована (cookies/live-профиль)")
+
+                    # ---------- сохранение по формату ----------
+                    if fmt == "pdf":
+                        try:
+                            probe = page.evaluate(
+                                "() => (document.querySelector(%s) || document.body || {}).innerText || ''"
+                                % json.dumps(CONTENT_SELECTOR))
+                            result["word_count"] = len(str(probe).split()) or None
+                        except Exception:
+                            result["word_count"] = None
+
+                        pdf_ok = False
+                        if session.engine == "chromium":
+                            try:
+                                try:
+                                    page.emulate_media(media="screen")
+                                except Exception:
+                                    pass
+                                page.pdf(path=filepath, format='A4', printbackground=True,
+                                         scale=1.0, timeout=60000,
+                                         margin={'top': '0.5in', 'bottom': '0.5in',
+                                                 'left': '0.5in', 'right': '0.5in'})
+                                pdf_ok = True
+                            except Exception as ep:
+                                log_cb(f"   ⚠️ page.pdf не удался: {str(ep)[:110]}")
+
+                        if not pdf_ok:
+                            ct = ""
+                            try:
+                                ct = (response.headers.get("content-type") or "") if response else ""
+                            except Exception:
+                                pass
+                            if "pdf" in ct.lower(

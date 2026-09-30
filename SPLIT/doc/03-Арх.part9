@@ -1,0 +1,19 @@
+n-300" aria-labelledby="hs-arch-2">
+                <div class="p-6 pt-0 space-y-4">
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://peter.sh/experiments/chromium-command-line-switches/|14">
+                    Chrome поддерживает переключатель --user-data-dir для указания каталога данных пользователя, где браузер ищет все свое состояние (профили, cookies, локальное хранилище), позволяя внешним скриптам указывать на существующие портативные профили.
+                  </p>
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://stackoverflow.com/questions/37590272/command-line-parameters-for-firefox|48">
+                    Параметры командной строки для Firefox включают -P &lt;profile&gt; для запуска с конкретным профилем и --profile &lt;path&gt; для запуска с профилем по указанному пути.
+                  </p>
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://groups.google.com/g/selenium-users/c/RMuo7l222g8|3">
+                    В Selenium с ChromeDriver аргумент командной строки --user-data-dir используется для указания пути к пользовательскому каталогу данных. Это позволяет автоматизации сохранять cookies, локальное хранилище и другое состояние браузера между сессиями.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="hs-accordion card-interactive bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+              <button class="hs-accordion-toggle w-full flex justify-between items-center p-4 text-left hover:bg-primary-50 dark:hover:bg-gray-700/50 transition-colors rounded-xl" id="hs-arch-3">
+                <div class="flex items-center space-x-4">
+                  <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center ju

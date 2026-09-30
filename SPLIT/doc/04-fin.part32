@@ -1,0 +1,38 @@
+ or 0) for r in clean),
+    }
+
+    with open(os.path.join(out_dir, "manifest.json"), "w", encoding="utf-8") as f:
+        json.dump({
+            "app": APPNAME, "version": APPVERSION, "build": BUILD_DATE,
+            "generated": datetime.now().isoformat(timespec="seconds"),
+            "mergedfile": mergedfilename,
+            "browser": browser_info or {},
+            "totals": totals,
+            "sources": clean,
+        }, f, ensure_ascii=False, indent=2)
+
+    lines = [
+        f"# {APPNAME} v{APPVERSION} — отчёт о сборе\n",
+        f"Сгенерировано: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  ",
+        f"Всего источников: {len(clean)} · успешно: {ok_n} · "
+        f"объём: {human_size(totals['bytes'])} · слов: {totals['words']}\n",
+    ]
+    if browser_info:
+        lines.append(f"Браузер: {browser_info.get('label', '—')} · "
+                     f"движок: {browser_info.get('engine', '—')} · "
+                     f"режим: {browser_info.get('mode', '—')}\n")
+    if merged_filename:
+        lines.append(f"Объединённый файл: {merged_filename}\n")
+    lines.append("| # | Заголовок | URL | Статус | Файл | Размер | Слов | Метод |")
+    lines.append("|---|---|---|---|---|---|---|---|")
+    for i, r in enumerate(clean, 1):
+        status_icon = "✅" if r["status"] == "ok" else "❌"
+        blocked = " ⚠️блок" if r.get("blocked_suspected") else ""
+        title = (r["title"] or "—").replace("|", "/")[:60]
+        file_link = f"[{r['file']}](./{r['file']})" if r["file"] else "—"
+        size = humansize(r["sizebytes"]) if r["size_bytes"] else "—"
+        words = r["wordcount"] if r["wordcount"] else "—"
+        lines.append(f"| {i} | {title} | {r['url']} | {statusicon}{blocked} | {filelink} "
+                     f"| {size} | {words} | {r['method']} |")
+        if r["status"] != "ok" and r.get("error"):
+            lines.append(f"|   | ошибка: {str(r['error'])[:150]} 

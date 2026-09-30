@@ -1,0 +1,37 @@
+    self.log(f"🚀 {APPNAME} v{APPVERSION}  (build {BUILD_DATE})", "head")
+        self.log(f"📁 Папка результата: {out_dir}", "info")
+        self.log(f"📄 Формат: {settings['fmt'].upper()} | Объединить: "
+                 f"{'ДА' if settings['merge'] else 'НЕТ'}", "info")
+        self.log(f"🌐 URLs: {total} | Потоков: {settings['concurrency']} | Повторов: "
+                 f"{settings['retries']} | Режим: "
+                 f"{'агрессивный' if settings['aggressive'] else 'щадящий'}", "info")
+        self.log(f"🧭 Браузер: {settings['external_browser']}", "info")
+        if settings["use_profile"]:
+            self.log(f"👤 Профиль: {settings['customprofilepath']}"
+                     + ("  [будет скопирован]" if settings["copy_profile"] else "  [оригинал]"),
+                     "info")
+        if settings["attach_cdp"]:
+            self.log(f"🔌 CDP: 127.0.0.1:{settings['cdp_port']} (только localhost)", "info")
+        self.log(f"🙈 Headless: {'ДА' if settings['headless'] else 'НЕТ'} | "
+                 f"Stealth: {'ДА' if settings['stealth'] else 'НЕТ'}", "info")
+        self.log("=" * 62, "head")
+
+        self.browsermanager.logcb = self.log
+        storage_dumped = [None]
+
+        def worker(worker_id):
+            while not self.stopevent.isset():
+                try:
+                    url = urlq.getnowait()
+                except queue.Empty:
+                    break
+                self.log(f"\n[поток {worker_id}] 📥 {url[:75]}", "info")
+                res = scrapeone(url, settings["fmt"], outdir, settings, self.log,
+                                 shouldstop=self.stopevent.is_set,
+                                 browsermanager=self.browsermanager)
+                with self.lock:
+                    manifest.append(res)
+                    if res["status"] == "ok":
+                        counters["ok"] += 1
+                    else:
+                        co

@@ -1,0 +1,46 @@
+=========== */
+const LOG_LEVELS = { head:"head", info:"info", ok:"ok", warn:"warn", err:"err", step:"step", mut:"mut", vio:"vio" };
+let autoScroll = true, logFilter = "all", logLines = [];
+
+function log(msg, level="info"){
+  const lv = LOG_LEVELS[level] ? level : "info";
+  logLines.push({ t:clockTime(), msg:String(msg), lv });
+  if(logLines.length > 4000) logLines.splice(0, logLines.length-4000);
+  if(!matchFilter(lv)) return;
+  appendLogNode(lv, clockTime(), String(msg));
+}
+function matchFilter(lv){
+  if(logFilter === "all") return true;
+  if(logFilter === "ok")   return lv === "ok" || lv === "head";
+  if(logFilter === "warn") return lv === "warn" || lv === "vio";
+  if(logFilter === "err")  return lv === "err";
+  return true;
+}
+function appendLogNode(lv, ts, msg){
+  const box = $("#log");
+  const div = document.createElement("div");
+  div.className = "ln " + lv;
+  div.dataset.lv = lv;
+  div.innerHTML = `<span class="ts">${ts}</span>${escapeHtml(msg)}`;
+  box.appendChild(div);
+  while(box.children.length > 1600) box.removeChild(box.firstChild);
+  if(autoScroll) box.scrollTop = box.scrollHeight;
+}
+function rebuildLog(){
+  const box = $("#log"); box.innerHTML = "";
+  logLines.filter(l=>matchFilter(l.lv)).forEach(l=>appendLogNode(l.lv, l.t, l.msg));
+}
+function rule(ch="=", lvl="head"){ log(ch.repeat(62), lvl); }
+
+/* ============================== toast ============================== */
+function toast(title, sub, kind="ok"){
+  const box = $("#toast");
+  const el = document.createElement("div");
+  el.className = "tst " + (kind==="ok"?"":kind);
+  el.innerHTML = `<b>${escapeHtml(title)}</b><span>${escapeHtml(sub||"")}</span>`;
+  box.appendChild(el);
+  setTimeout(()=>{ el.classList.add("out"); setTimeout(()=>el.remove(),320); }, 4200);
+}
+
+/* ============================== DOM → text / markdown ============================== */
+const BLOCK_TAGS = new Set(["P","DIV","SECTION","

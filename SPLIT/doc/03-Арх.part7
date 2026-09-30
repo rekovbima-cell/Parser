@@ -1,0 +1,18 @@
+tween items-center p-4 text-left hover:bg-primary-50 dark:hover:bg-gray-700/50 transition-colors rounded-xl" id="hs-arch-1">
+                <div class="flex items-center space-x-4">
+                  <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                    <i data-lucide="plug" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                  </div>
+                  <span class="font-semibold text-lg text-primary-700 dark:text-primary-300">Подключение через CDP</span>
+                </div>
+                <i data-lucide="chevron-down" class="hs-accordion-active:rotate-180 transition-transform duration-300 w-5 h-5 text-primary-600 dark:text-primary-400"></i>
+              </button>
+              <div id="hs-collapse-arch-1" class="hs-accordion-content hidden w-full overflow-hidden transition-[height] duration-300" aria-labelledby="hs-arch-1">
+                <div class="p-6 pt-0 space-y-4">
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://www.browserless.io/blog/chrome-remote-debugging|1">
+                    Для включения удаленной отладки в запущенном экземпляре Chrome он должен быть запущен с флагом --remote-debugging-port=9222. Это открывает конечную точку WebSocket на localhost:9222, к которой могут подключаться внешние инструменты, такие как Puppeteer или Playwright.
+                  </p>
+                  <p class="text-gray-700 dark:text-gray-300" data-ref="https://playwright.dev/docs/api/class-browsertype|5">
+                    Playwright предоставляет метод connectOverCDP для подключения к существующему экземпляру браузера на основе Chromium с использованием Chrome DevTools Protocol (CDP). Подключение осуществляется путем предоставления URL-адреса конечной точки веб-сокета CDP.
+                  </p>
+                  <div class="

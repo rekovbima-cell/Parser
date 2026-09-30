@@ -1,0 +1,49 @@
+anifestObj(), null, 2));
+  zip.file("INDEX.md", indexMd());
+  zip.generateAsync({ type: "blob" }).then(b => {
+    download("MEGA_TANK_" + state.stamp + ".zip", b);
+    toast("Скачан ZIP", rs.length + " файлов · " + humanSize(b.size));
+  });
+}
+
+/* ============================== список URL ============================== */
+function readUrls(){
+  return $("#urls").value.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+}
+function renderChips(urls){
+  const box = $("#urlChips");
+  box.innerHTML = "";
+  const hosts = [];
+  urls.forEach(u => { try{ const h = new URL(normalizeUrl(u)).hostname; if(!hosts.includes(h)) hosts.push(h); }catch(e){} });
+  hosts.slice(0, 12).forEach(h => {
+    const s = document.createElement("span");
+    s.textContent = h;
+    s.style.cssText = "display:inline-block;padding:2px 9px;margin:2px;border-radius:10px;font-size:11px;opacity:.8";
+    box.appendChild(s);
+  });
+  if(hosts.length > 12){
+    const s = document.createElement("span");
+    s.textContent = "+" + (hosts.length - 12);
+    s.style.cssText = "padding:2px 6px;font-size:11px;opacity:.6";
+    box.appendChild(s);
+  }
+}
+function updCount(){
+  const u = readUrls();
+  $("#urlCount").textContent = String(u.length);
+  renderChips(u);
+}
+
+/* ============================== init ============================== */
+function init(){
+  $("#concVal").textContent = $("#conc").value;
+  $("#retVal").textContent = $("#ret").value;
+  $("#conc").addEventListener("input", e => $("#concVal").textContent = e.target.value);
+  $("#ret").addEventListener("input", e => $("#retVal").textContent = e.target.value);
+  ["merge","aggr","fallback","demo"].forEach(id => {
+    const el = $("#" + id);
+    const lbl = el.closest("label");
+    if(lbl) lbl.classList.toggle("on", el.checked);
+    el.addEventListener("change", () => lbl && lbl.classList.toggle("on", el.checked));
+  });
+  $("#urls").addEventListener("input", upd

@@ -1,0 +1,42 @@
+e)
+
+                title = ""
+                try:
+                    title = page.title()
+                except Exception:
+                    pass
+                result["title"] = title
+
+                status_code = response.status if response else None
+                body_sample = ""
+                try:
+                    body_sample = page.locator('body').inner_text(timeout=5000)[:2000]
+                except Exception:
+                    pass
+                blocked = (status_code in (403, 429, 503)) or looks_blocked(title, body_sample)
+                result["blocked_suspected"] = blocked
+                if blocked:
+                    log_cb(f"   ⚠️ Похоже на блокировку (код {status_code}), попытка {attempt}/{max_attempts}")
+
+                # --- Сохранение по формату ---
+                if fmt == "pdf":
+                    page.pdf(
+                        path=file_path, format='A4', print_background=True,
+                        margin={'top': '0.5in', 'bottom': '0.5in', 'left': '0.5in', 'right': '0.5in'},
+                    )
+                    result["word_count"] = None
+                elif fmt == "html":
+                    content = page.content()
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(content)
+                elif fmt == "txt":
+                    text_content = extract_page_text(page)
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(text_content)
+                    result["word_count"] = len(text_content.split())
+                    result["_text"] = text_content
+                elif fmt == "md":
+                    content = extract_page_html(page)
+                    md_text = html_to_markdown(content, url)
+                    header = f"# {title or url}\n\nИсточник: {url}\n\n---\n\n"
+                    full_md = header +

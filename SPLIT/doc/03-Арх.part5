@@ -1,0 +1,27 @@
+   <section id="architecture" class="py-20 bg-white/80 dark:bg-gray-900" data-aos="fade-up">
+      <div class="max-w-6xl mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-8 text-primary-700 dark:text-primary-300">
+          Архитектурные принципы интеграции
+        </h2>
+
+        <div class="grid md:grid-cols-3 gap-6 mb-12">
+          <div class="card-interactive p-6 bg-primary-50/50 dark:bg-primary-900/20 rounded-xl shadow-md">
+            <div class="flex items-center space-x-4 mb-4">
+              <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="cpu" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-primary-700 dark:text-primary-300" data-ref="https://stackoverflow.com/questions/62281859/how-to-use-installed-version-of-chrome-in-playwright|7">
+                Поддержка движков
+              </h3>
+            </div>
+            <p class="text-gray-700 dark:text-gray-300 text-sm">
+              Playwright позволяет запускать внешний экземпляр Google Chrome вместо встроенного Chromium, используя опцию executablePath. Версия внешнего Chrome должна совпадать с версией Chromium, с которым был построен Playwright.
+            </p>
+          </div>
+
+          <div class="card-interactive p-6 bg-accent-50/50 dark:bg-accent-900/20 rounded-xl shadow-md">
+            <div class="flex items-center space-x-4 mb-4">
+              <div class="flex-shrink-0 w-12 h-12 bg-accent-100 dark:bg-accent-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="layers" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+              </div>
+              <h3 class="text-lg font-semibold text-accent-700 dark:text-accent-300" data-ref="https://playwright.dev/docs/api/clas

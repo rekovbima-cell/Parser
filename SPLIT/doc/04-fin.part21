@@ -1,0 +1,43 @@
+Content-Type, иначе apparent_encoding: без этого кириллица
+    приходит как ISO-8859-1 и превращается в можибаку."""
+    import requests
+    resp = requests.get(url, headers=headers, timeout=25, allow_redirects=True)
+    ctype = resp.headers.get("content-type", "") or ""
+    m = re.search(r'charset=([\w\-]+)', ctype, re.I)
+    if m:
+        try:
+            resp.encoding = m.group(1)
+        except Exception:
+            resp.encoding = "utf-8"
+    else:
+        resp.encoding = resp.apparent_encoding or "utf-8"
+    resp.raiseforstatus()
+    return resp.text, resp.status_code
+
+def fetch_bytes(url, headers):
+    import requests
+    resp = requests.get(url, headers=headers, timeout=40, allow_redirects=True)
+    resp.raiseforstatus()
+    return resp.content
+
+def pdffromhtml(htmlbody, title, url, outpath, log_cb):
+    """PDF для Gecko: page.pdf() есть только в Chromium, поэтому рендерим
+    сохранённый HTML отдельным headless-Chromium."""
+    from playwright.syncapi import syncplaywright
+    doc = f"""
+{title or url}
+body{{font-family:'Segoe UI',Arial,sans-serif;font-size:12pt;line-height:1.55;color:#111;margin:0}}
+h1{{font-size:19pt;color:#0b6b3a;margin:0 0 4px}} .meta{{color:#666;font-size:9pt;border-bottom:1px solid #ddd;
+padding-bottom:6px;margin-bottom:14px;word-break:break-all}} img{{max-width:100%}}
+pre{{background:#f5f5f5;border:1px solid #ddd;padding:8px;font-size:9pt;white-space:pre-wrap}}
+table{{border-collapse:collapse}} td,th{{border:1px solid #ccc;padding:4px;font-size:10pt}}
+a{{color:#0a6b3d;text-decoration:none}}
+{title or url}
+Источник: {url}Сохранено: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} · {APPNAME} v{APPVERSION}
+{html_body}"""
+    with sync_playwright() as p:
+        browser = launchchromiumfallback(p, buildlaunchargs("en-US"))
+        try:
+            page = browser.new_page()
+            page.setcontent(doc, waituntil="domcontentloaded")
+    

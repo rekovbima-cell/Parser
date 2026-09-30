@@ -1,0 +1,13 @@
+hromium от Playwright, который имеет предсказуемый цифровой отпечаток и не сохраняет состояние между запусками. Для решения проблемы доступа к закрытому контенту требуется интеграция с реальными пользовательскими средами: портативными браузерами, которые могут быть предварительно настроены, авторизованы на целевых ресурсах и иметь уникальный, «прогретый» цифровой след.
+
+Задача данного исследования — разработать архитектуру, позволяющую MEGA TANK v3.0 использовать внешние браузеры (Chrome Portable, Firefox Portable, LibreWolf и др.) и подключаться к уже запущенным сессиям пользователей. Это требует глубокой переработки уровня взаимодействия с браузером, так как протоколы управления Chromium (CDP) и Gecko (Juggler/RDP) фундаментально различаются, а механизмы хранения профилей в портативных версиях имеют свои особенности [[10](https://portableapps.com/node/5376), [28](https://github.com/feder-cr/invisible_playwright/wiki/playwright-connect-over-cdp-firefox), [29](https://remote-browser.dev/blog/firefox-cdp)].
+
+## 2. Анализ технических требований и ограничений
+
+### 2.1. Гетерогенность браузерных движков
+
+Для обеспечения максимальной совместимости система должна поддерживать два основных семейства браузерных движков:
+1.  **Blink (Chromium):** Google Chrome, Microsoft Edge, Brave, Opera, а также их портативные версии. Управление осуществляется через Chrome DevTools Protocol (CDP) [[1](https://www.browserless.io/blog/chrome-remote-debugging)].
+2.  **Gecko (Firefox):** Mozilla Firefox, LibreWolf, Waterfox. Playwright использует собственный протокол Juggler для управления Firefox, так как нативная поддержка CDP в Firefox отсутствует или ограничена [[28](https://github.com/feder-cr/invisible_playwright/wiki/playwright-connect-over-cdp-firefox), [29](https://remote-browser.dev/blog/firefox-cdp)].
+
+Интеграция должна быть прозрачной для пользователя: выбор браузера в интерфейсе до

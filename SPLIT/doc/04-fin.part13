@@ -1,0 +1,41 @@
+  profilepath = os.path.abspath(os.path.expandvars(os.path.expanduser(profilepath or "")))
+        if not profile_path:
+            return "", False
+
+        if not copy_profile:
+            try:
+                os.makedirs(profilepath, existok=True)
+            except Exception as e:
+                cb(f"⚠️ не удалось использовать профиль {profile_path}: {e}")
+            return profile_path, False
+
+        name = re.sub(r'[^\w\-.]', '', os.path.basename(profile_path.rstrip("\\/"))) or "profile"
+        dest = os.path.join(PROFILE_ROOT, name)
+        try:
+            os.makedirs(dest, exist_ok=True)
+            if os.path.isdir(profile_path):
+                cb(f"📑 Копирую профиль {profile_path} → {dest} (кэш исключён)...")
+                t0 = time.time()
+                shutil.copytree(profilepath, dest, ignore=PROFILEIGNORE,
+                                dirsexistok=True, symlinks=False)
+                cb(f"   ✅ копия готова за {time.time() - t0:.1f} с — оригинал не трогается")
+            return dest, True
+        except Exception as e:
+            cb(f"⚠️ копирование профиля не удалось ({str(e)[:120]}) — работаю с оригиналом")
+            return profile_path, False
+
+==============================================================================
+BROWSER SESSION — единая обёртка над launch / persistent / connectovercdp
+==============================================================================
+class BrowserSession:
+    """Владеет browser/context/page и знает, ЧТО именно разрешено закрывать.
+
+    Ключевое правило Extended-сборки: подключённый браузер пользователя
+    (CDP) и его контекст не закрываются никогда — только наша вкладка.
+    """
+
+    def init(self, browser=None, context=None, owns_browser=True,
+                 owns_context=True, engine="chromium", label=""):
+        self.browser = browser
+        self.context = context
+        self.ownsbrowser = o

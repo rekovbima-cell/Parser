@@ -1,0 +1,49 @@
+wargs = {"headless": headless}
+    if plan.get("executable_path"):
+        launchkwargs["executablepath"] = plan["executable_path"]
+    elif plan.get("channel"):
+        launch_kwargs["channel"] = plan["channel"]
+    if engine == "chromium":
+        launchkwargs["args"] = list(plan.get("args", [])) or buildlaunch_args(locale)
+    else:
+        launch_kwargs["args"] = list(plan.get("args", []))
+        launchkwargs["firefoxuserprefs"] = dict(GECKOPREFS)
+
+    browser = btype.launch(launch_kwargs)
+    context = safenewcontext(browser, opts, log_cb)
+    if stealth_on and engine == "chromium":
+        try:
+            context.addinitscript(buildstealthscript(ua, locale))
+        except Exception:
+            pass
+    return BrowserSession(browser, context, ownsbrowser=True, ownscontext=True,
+                          engine=engine, label=plan["label"])
+
+def safenewcontext(browser, opts, log_cb):
+    """Часть опций контекста может не поддерживаться конкретным движком/сборкой —
+    деградируем пошагово, а не роняем весь URL."""
+    keysorder = ["permissions", "devicescalefactor", "extrahttp_headers"]
+    attempt = dict(opts)
+    last = None
+    for  in range(len(keysorder) + 1):
+        try:
+            return browser.new_context(attempt)
+        except Exception as e:
+            last = e
+            drop = next((k for k in keys_order if k in attempt), None)
+            if not drop:
+                break
+            attempt.pop(drop, None)
+            log_cb(f"   ℹ️ контекст без «{drop}»: {str(e)[:90]}")
+    raise last or RuntimeError("не удалось создать контекст")
+
+==============================================================================
+АВТОУСТАНОВКА ЗАВИСИМОСТЕЙ
+==============================================================================
+class AutoInstaller:
+    def init(self):
+        self.missing = []
+        self.installed = []
+
+    def check(self, pkg, imp):
+ 

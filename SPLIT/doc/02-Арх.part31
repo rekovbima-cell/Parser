@@ -1,0 +1,43 @@
+}")
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(toc) + "\n" + "".join(body_parts))
+
+def merge_html(ok_results, out_dir, out_path):
+    from bs4 import BeautifulSoup
+    nav_items, sections = [], []
+    for r in ok_results:
+        anchor = slugify(r["title"] or r["url"])
+        nav_items.append(f'<li><a href="#{anchor}">{r["title"] or r["url"]}</a></li>')
+        fp = os.path.join(out_dir, r["file"])
+        try:
+            with open(fp, "r", encoding="utf-8", errors="ignore") as f:
+                raw = f.read()
+            soup = BeautifulSoup(raw, "html.parser")
+            for tag in soup(["script", "iframe", "object", "embed", "base", "form"]):
+                tag.decompose()
+            if soup.body:
+                absolutize(soup, r["url"])
+                inner = str(soup.body)
+            else:
+                absolutize(soup, r["url"])
+                inner = str(soup)
+        except Exception:
+            inner = "<p>(не удалось прочитать)</p>"
+        sections.append(
+            f'<section id="{anchor}"><h1>{r["title"] or r["url"]}</h1>'
+            f'<p class="src">Источник: <a href="{r["url"]}">{r["url"]}</a></p>{inner}</section><hr/>')
+    html_doc = f"""<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>{APP_NAME} — Сводный экспорт</title>
+<style>
+body{{font-family:Segoe UI,Arial,sans-serif;background:#0d0d12;color:#e4e4e4;max-width:980px;margin:0 auto;padding:30px;line-height:1.6;}}
+nav{{background:#1a1a2e;padding:15px 20px;border-radius:8px;margin-bottom:30px;}}
+nav a{{color:#00ff88;text-decoration:none;}}
+nav a:hover{{text-decoration:underline;}}
+section{{margin-bottom:40px;}}
+.src{{color:#888;font-size:0.9em;word-break:break-all;}}
+hr{{border-color:#333;}}
+h1{{color:#00ff88;}}
+a{{color:#5aa9ff;}}
+img{{max-width:100%;height:auto;}}
+pre{{background:#111;padding:12px;border-radius:8px;overflow:au

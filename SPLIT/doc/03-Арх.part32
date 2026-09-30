@@ -1,0 +1,56 @@
+st { text, grid } = getColors();
+      
+      const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: text, font: { size: 12 } } } },
+        scales: {
+          x: { ticks: { color: text }, grid: { color: grid } },
+          y: { beginAtZero: true, ticks: { color: text }, grid: { color: grid } }
+        }
+      };
+
+      // CDP Protocol Chart
+      if (document.getElementById('cdpChart')) {
+        charts.cdp = new Chart(document.getElementById('cdpChart'), {
+          type: 'bar',
+          data: cdpData,
+          options: { 
+            ...commonOptions, 
+            plugins: { 
+              legend: { display: false },
+              title: {
+                display: true,
+                text: 'Процент уникальных отпечатков браузеров',
+                color: text,
+                font: { size: 14, weight: 'bold' }
+              }
+            }
+          }
+        });
+      }
+      
+      new MutationObserver(() => {
+        cdpData.datasets[0].backgroundColor = [
+          getThemeColor('hsl(210, 75%, 40%)', 'hsl(210, 75%, 55%)'),
+          getThemeColor('hsl(240, 65%, 55%)', 'hsl(240, 65%, 65%)')
+        ];
+        updateCharts();
+      }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    });
+
+    // Progress bar
+    window.addEventListener('scroll', () => {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progressBar').style.width = scrolled + '%';
+    });
+  </script>
+
+  <!-- Citation System -->
+  <script>
+    function initCitationSystem() {
+      let i = 1, map = new Map();
+      document.querySelectorAll('[data-ref]').forEach(el => {
+       

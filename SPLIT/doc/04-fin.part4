@@ -1,0 +1,36 @@
+tform',  { get: () => PLATFORM }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'languages', { get: () => LANGS }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'vendor',    { get: () => 'Google Inc.' }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => HW }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'deviceMemory', { get: () => MEM }); } catch (e) {}
+
+    const mk = (name, filename, description) => ({ name, filename, description, length: 1 });
+    const pluginArr = [
+        mk('Chrome PDF Plugin', 'internal-pdf-viewer',             'Portable Document Format'),
+        mk('Chrome PDF Viewer', 'mhjfbmdgcfjbbpaeojofohoefgiehjai', ''),
+        mk('Native Client',     'internal-nacl-plugin',             '')
+    ];
+    pluginArr.item      = (i) => pluginArr[i] || null;
+    pluginArr.namedItem = (n) => pluginArr.filter(p => p.name === n)[0] || null;
+    pluginArr.refresh   = () => {};
+    try { Object.defineProperty(navigator, 'plugins',   { get: () => pluginArr }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'mimeTypes', { get: () => [] }); } catch (e) {}
+
+    window.chrome = window.chrome || { runtime: {}, loadTimes: () => ({}), csi: () => ({}) };
+
+    try {
+        const origQuery = window.navigator.permissions && window.navigator.permissions.query;
+        if (origQuery) {
+            window.navigator.permissions.query = (parameters) => (
+                parameters && parameters.name === 'notifications'
+                    ? Promise.resolve({ state: (typeof Notification !== 'undefined' && Notification.permission) || 'granted' })
+                    : origQuery(parameters)
+            );
+        }
+    } catch (e) {}
+
+    try {
+        const patch = (proto) => {
+            if (!proto) return;
+            const orig = proto.getParameter;
+            proto.getParameter = 

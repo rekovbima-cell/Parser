@@ -1,0 +1,59 @@
+out, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+fixconsole()
+
+==============================================================================
+КОНСТАНТЫ
+==============================================================================
+APP_NAME = "MEGA TANK"
+APP_VERSION = "3.0 EXT"
+BUILD_DATE = "29.09.2026"
+
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(file))
+
+PROFILEROOT = os.path.join(BASEDIR, "MEGATANKprofiles")
+CREATENOWINDOW = subprocess.CREATENOWINDOW if os.name == "nt" else 0
+
+SYSTEM_BROWSER = "System Default (Playwright bundled)"
+
+REQUIRED_PACKAGES = [
+    ("requests", "requests"),
+    ("playwright", "playwright"),
+    ("pypdf", "pypdf"),
+    ("python-docx", "docx"),
+    ("beautifulsoup4", "bs4"),
+    ("markdownify", "markdownify"),
+]
+
+FORMAT_MAP = {
+    "PDF": "pdf",
+    "HTML": "html",
+    "TXT": "txt",
+    "DOCX": "docx",
+    "Markdown": "md",
+}
+
+BLOCKED_MARKERS = [
+    "just a moment", "checking your browser", "attention required",
+    "access denied", "are you a robot", "captcha", "cloudflare",
+    "rate limit exceeded", "403 forbidden", "request blocked",
+    "unusual traffic", "verify you are human", "bot detection",
+]
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10157) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+]
+
+LOCALETZPAIRS = [
+    ("en-US", "America/New_York"),
+    ("en-US

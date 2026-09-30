@@ -1,0 +1,62 @@
+now().strftime("%Y-%m-%d_%H%M%S")
+
+
+def quick_dns_check(url):
+    """Быстрая проверка, что домен вообще резолвится — экономит время на мусорных URL."""
+    try:
+        host = urlparse(url).hostname
+        if not host:
+            return False, "Не удалось разобрать URL"
+        socket.setdefaulttimeout(5)
+        socket.gethostbyname(host)
+        return True, None
+    except Exception as e:
+        return False, f"DNS/сеть недоступны: {e}"
+
+
+def random_locale_tz():
+    return random.choice(LOCALE_TZ_PAIRS)
+
+
+def random_ua():
+    return random.choice(USER_AGENTS)
+
+
+def build_headers(ua):
+    is_mac = "Macintosh" in ua
+    is_linux = "X11; Linux" in ua
+    platform = '"macOS"' if is_mac else ('"Linux"' if is_linux else '"Windows"')
+    version = "148" if "148." in ua else "147"
+    return {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Sec-CH-UA": f'"Google Chrome";v="{version}", "Chromium";v="{version}", "Not=A?Brand";v="99"',
+        "Sec-CH-UA-Mobile": "?0",
+        "Sec-CH-UA-Platform": platform,
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
+        "User-Agent": ua,
+    }
+
+
+def looks_blocked(title, body_sample):
+    haystack = f"{title} {body_sample}".lower()
+    return any(marker in haystack for marker in BLOCKED_MARKERS)
+
+
+def autoscroll(page, steps=6, pause=0.35):
+    """Прокручивает страницу, чтобы триггернуть ленивую подгрузку контента."""
+    try:
+        for _ in range(steps):
+            page.mouse.wheel(0, random.randint(500, 900))
+            page.wait_for_timeout(int(pause * 1000))
+        page.evaluate("window.scrollTo(0, 0)")
+    except Exception:
+        pass
+
+
+def extract_

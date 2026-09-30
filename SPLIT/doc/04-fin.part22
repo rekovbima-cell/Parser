@@ -1,0 +1,47 @@
+        page.waitfortimeout(400)
+            page.emulate_media(media="screen")
+            page.pdf(path=outpath, format='A4', printbackground=True, timeout=60000,
+                     margin={'top': '0.5in', 'bottom': '0.5in',
+                             'left': '0.5in', 'right': '0.5in'})
+        finally:
+            try:
+                browser.close()
+            except Exception:
+                pass
+    log_cb("   🧾 PDF собран через headless-Chromium (Gecko не умеет page.pdf)")
+
+==============================================================================
+ОСНОВНАЯ ЛОГИКА СКРАПИНГА
+==============================================================================
+def scrapeone(url, fmt, outdir, settings, logcb, shouldstop=None, browser_manager=None):
+    stop = should_stop or (lambda: False)
+    result = {
+        "url": url, "title": "", "status": "failed", "format": fmt,
+        "file": None, "sizebytes": 0, "wordcount": None,
+        "blocked_suspected": False, "method": "playwright",
+        "attempts": 0, "error": None, "elapsed_sec": 0.0,
+        "browser": settings.get("externalbrowser", SYSTEMBROWSER),
+        "engine": "chromium", "session_mode": "bundled",
+    }
+    t0 = time.time()
+
+    okdns, dnserr = quickdnscheck(url)
+    if not ok_dns:
+        result["error"] = dns_err
+        result["elapsed_sec"] = round(time.time() - t0, 2)
+        logcb(f"   ❌ {dnserr}")
+        return result
+
+    filepath = reservepath(out_dir, sanitize(url), fmt)
+
+    aggressive = bool(settings.get("aggressive"))
+    max_attempts = max(1, settings["retries"] + 1)
+    goto_timeout = 30000 if aggressive else 45000
+    net_timeout = 6000 if aggressive else 12000
+    last_error = None
+
+    # ---- план запуска браузера (один на все попытки, но пересобирается при отказе)
+    plan = None
+    if browser_manager is not None:
+        plan = browsermanager.buildplan(
+            settings

@@ -1,0 +1,27 @@
+зации (MCP Client) к серверу (Chrome Debug MCP Server) через стандартный ввод/вывод (stdio), который затем устанавливает соединение WebSocket с Chrome DevTools Protocol (CDP) на указанном порту отладки.
+              </p>
+            </div>
+
+            <div class="card-interactive p-6 bg-primary-50/50 dark:bg-primary-900/20 rounded-xl shadow-md">
+              <h4 class="text-lg font-semibold text-primary-700 dark:text-primary-300 mb-4" data-ref="https://mcpservers.org/servers/Rainmen-xia/chrome-debug-mcp-server|4">
+                Интеллектуальное управление вкладками
+              </h4>
+              <p class="text-gray-700 dark:text-gray-300 text-sm mb-4">
+                Ключевая особенность - 'Интеллектуальное управление вкладками', которое повторно использует существующие вкладки для того же домена, если они уже открыты в подключенном экземпляре Chrome, тем самым избегая избыточных входов или открытия вкладок во время автоматизации.
+              </p>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                Сервер поддерживает среды Dockerized, позволяя ему автоматически обнаруживать и подключаться к экземплярам Chrome, работающим внутри контейнеров, при условии, что они раскрывают порт отладки (например, -p 9222:9222) и используют --remote-debugging-address=0.0.0.0.
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <h3 class="text-2xl font-semibold text-primary-700 dark:text-primary-300">
+              Потокобезопасная реализация
+            </h3>
+
+            <div class="grid md:grid-cols-2 gap-6">
+              <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+                <div class="flex items-center space-x-3 mb-4">
+                  <i data-lucide="lock" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+          

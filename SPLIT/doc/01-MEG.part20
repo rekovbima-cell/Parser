@@ -1,0 +1,54 @@
+="normal")
+                    self.log_text.insert(tk.END, payload + "\n")
+                    self.log_text.see(tk.END)
+                    self.log_text.config(state="disabled")
+                elif kind == "progress":
+                    self.progress.set(payload)
+                elif kind == "stats":
+                    ok, fail = payload
+                    self.ok_label.config(text=f"✅ {ok}")
+                    self.fail_label.config(text=f"❌ {fail}")
+                elif kind == "done":
+                    self._on_finished(payload)
+        except queue.Empty:
+            pass
+        try:
+            self.root.after(80, self._poll_ui)
+        except tk.TclError:
+            pass
+
+    # ---------------- Запуск / остановка ----------------
+    def start(self):
+        if self.is_running:
+            return
+        raw_urls = self.urls.get("1.0", tk.END).strip()
+        if not raw_urls:
+            messagebox.showwarning("Ошибка", "Введите хотя бы один URL!")
+            return
+
+        seen = set()
+        valid_urls = []
+        for u in (x.strip() for x in raw_urls.splitlines()):
+            if not u:
+                continue
+            if not u.startswith(("http://", "https://")):
+                self.log(f"⚠️ Невалидный URL пропущен: {u}")
+                continue
+            if u in seen:
+                continue
+            seen.add(u)
+            valid_urls.append(u)
+
+        if not valid_urls:
+            messagebox.showwarning("Ошибка", "Ни одного валидного URL не найдено!")
+            return
+
+        out_dir = os.path.join(BASE_DIR, f"MEGA_TANK_{now_stamp()}")
+        os.makedirs(out_dir, exist_ok=True)
+        self.last_output_dir = out_dir
+
+        settings = {
+            "fmt": FORMAT_MAP[self.fmt_label.get()],
+            "merge": self.merge.get(),
+            "aggressive": self.aggr.get(),
+            "concurrency": max(1, min(5, self.concurr

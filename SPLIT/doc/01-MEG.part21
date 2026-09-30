@@ -1,0 +1,53 @@
+ency.get())),
+            "retries": max(0, min(3, self.retries.get())),
+        }
+
+        self.stop_event.clear()
+        self.is_running = True
+        self.btn.config(state="disabled", text="⏳ РАБОТАЮ...")
+        self.stop_btn.config(state="normal")
+        self.folder_btn.config(state="disabled")
+        self.log_text.config(state="normal")
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.config(state="disabled")
+        self.set_progress(0)
+        self.set_stats(0, 0)
+
+        threading.Thread(target=self._coordinator, args=(valid_urls, out_dir, settings), daemon=True).start()
+
+    def stop(self):
+        self.stop_event.set()
+        self.stop_btn.config(state="disabled", text="⛔ ОСТАНАВЛИВАЮ...")
+        self.log("\n⛔ Остановка запрошена пользователем — потоки завершают текущие задачи...")
+
+    def on_close(self):
+        if self.is_running:
+            if not messagebox.askyesno("Подтверждение", "Скрапинг ещё идёт. Закрыть всё равно?"):
+                return
+            self.stop_event.set()
+        self.root.destroy()
+
+    def open_output_folder(self):
+        if not self.last_output_dir or not os.path.isdir(self.last_output_dir):
+            return
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(self.last_output_dir)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", self.last_output_dir])
+            else:
+                subprocess.Popen(["xdg-open", self.last_output_dir])
+        except Exception:
+            webbrowser.open(f"file://{self.last_output_dir}")
+
+    # ---------------- Координатор + воркеры ----------------
+    def _coordinator(self, urls, out_dir, settings):
+        url_q = queue.Queue()
+        for u in urls:
+            url_q.put(u)
+
+        manifest = []
+        counters = {"ok": 0, "fail": 0, "done": 0}
+        total = len(urls)
+
+        self.

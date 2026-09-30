@@ -1,0 +1,41 @@
+          <span><span class="lbl">🧪 Демо-режим</span><br><span class="sub">синтез контента, если сеть закрыта</span></span>
+          </label>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button class="btn btn-go" id="btnStart">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg> НАЧАТЬ
+        </button>
+        <button class="btn btn-stop" id="btnStop" disabled>
+          <svg class="ic" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> СТОП
+        </button>
+      </div>
+
+      <section class="panel">
+        <h2><span class="h2-l">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z"/></svg>
+          Stealth-профиль (текущий)</span></h2>
+        <div class="body">
+          <div class="stealth">
+            <div class="sp" id="spUa"><div class="k">User-Agent</div><div class="v">Chrome 148 · Win10</div></div>
+            <div class="sp" id="spLoc"><div class="k">Locale / TZ</div><div class="v">en-US · America/New_York</div></div>
+            <div class="sp" id="spVp"><div class="k">Viewport</div><div class="v">1920×1080</div></div>
+            <div class="sp" id="spProxy"><div class="k">Fetch-узел</div><div class="v">allorigins</div></div>
+          </div>
+          <div class="note">
+            <b>Профиль ротируется</b> на каждой попытке: UA, locale+timezone (согласованные пары),
+            viewport, fetch-узел. Аналог <b>context.add_init_script()</b> — navigator.webdriver скрыт.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============ RIGHT ============ -->
+    <div class="col">
+
+      <section class="panel">
+        <h2><span class="h2-l">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+          Прогресс</span>
+          <span class="badge" id="phaseBadge" styl

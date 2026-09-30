@@ -1,0 +1,43 @@
+config["profile_dir"]:
+            profile_path = browser_config["profile_dir"]
+
+        # Попытка подключиться к уже запущенному экземпляру через CDP (только для Chromium)
+        if engine == "chromium" and not headless:
+            try:
+                import requests
+                resp = requests.get(f"http://localhost:{cdp_port}/json/version", timeout=2)
+                if resp.status_code == 200:
+                    self.log_cb(f"🔗 Подключение к запущенному {browser_name} через CDP (порт {cdp_port})")
+                    return "chromium", {"connect_cdp": f"http://localhost:{cdp_port}"}
+            except Exception:
+                pass # Браузер не запущен с отладкой, будем запускать новый
+
+        # Подготовка аргументов для запуска
+        args = []
+        if engine == "chromium":
+            args.extend([
+                '--no-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--disable-blink-features=AutomationControlled',
+                '--hide-scrollbars',
+                '--mute-audio'
+            ])
+            if profile_path:
+                args.append(f"--user-data-dir={profile_path}")
+            if not headless:
+                # Для подключения к живому сеансу
+                args.append(f"--remote-debugging-port={cdp_port}")
+        
+        elif engine == "firefox":
+            # Для Firefox Portable часто требуется -no-remote для запуска нескольких копий
+            args.append("-no-remote")
+            if profile_path:
+                args.extend(["-profile", profile_path])
+            # Firefox не поддерживает CDP напрямую в Playwright, используем Juggler через launch
+            # Но можно включить сервер отладки для будущих версий
+            # args.append("-start-debugger-server") 
+
+        self.log_cb(f"🚀 Запуск {browser_name} ({engine})...")
+        if profile_path:
+            sel

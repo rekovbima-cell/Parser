@@ -1,0 +1,31 @@
+1, columnspan=2, sticky="w", padx=5, pady=4)
+        self.browsercombo.bind(">", self.onbrowserpick)
+
+        tk.Button(bframe, text="🔄 Обновить список", command=self.refreshbrowserlist,
+                  bg="#1e1e1e", fg="#00ff88", relief="flat", font=("Segoe UI", 9),
+                  cursor="hand2").grid(row=0, column=3, sticky="w", padx=5, pady=4)
+
+        tk.Label(bframe, text="Профиль (user-data-dir):", bg="#252540", fg="white").grid(
+            row=1, column=0, sticky="w", padx=5, pady=4)
+        self.profilepathvar = tk.StringVar()
+        tk.Entry(bframe, textvariable=self.profilepathvar, bg="#1e1e1e", fg="#00ff88",
+                 insertbackground="#00ff88", relief="flat",
+                 font=("Consolas", 9)).grid(row=1, column=1, columnspan=2,
+                                            sticky="we", padx=5, pady=4)
+        tk.Button(bframe, text="...", command=self.browse_profile, bg="#1e1e1e",
+                  fg="#00ff88", relief="flat", width=3, cursor="hand2").grid(
+            row=1, column=3, sticky="w", padx=5, pady=4)
+        bframe.columnconfigure(2, weight=1)
+
+        self.use_profile = tk.BooleanVar(value=False)
+        tk.Checkbutton(bframe, text="👤 Использовать профиль (cookies / local storage / "
+                                    "история = живая сессия)",
+                       variable=self.use_profile, bg="#252540", fg="#00ff88",
+                       selectcolor="#252540", font=("Segoe UI", 9, "bold")).grid(
+            row=2, column=0, columnspan=4, sticky="w", padx=5, pady=(4, 2))
+
+        self.copy_profile = tk.BooleanVar(value=True)
+        tk.Checkbutton(bframe, text="📑 Работать с КОПИЕЙ профиля (безопасно: оригинал "
+                                    "не блокируется и не меняется)",
+                       variable=self.copy_profile, bg="#252540", fg="#cccccc",
+                       selectcolor="#252540").grid(row=3, column

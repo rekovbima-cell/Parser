@@ -1,0 +1,40 @@
+
+  const act = tr.lastChild;
+  if(r.text || r.blob){
+    const mkBtn = (label, fn) => { const b = document.createElement("button"); b.className = "btn btn-ghost"; b.style.cssText = "padding:3px 8px;font-size:11px"; b.textContent = label; b.onclick = fn; return b; };
+    act.appendChild(mkBtn("👁", () => {
+      const blob = r.blob || new Blob([r.text], { type: MIME[state.fmt] || "text/plain" });
+      window.open(URL.createObjectURL(blob), "_blank");
+    }));
+    act.appendChild(mkBtn("⧉", () => navigator.clipboard && navigator.clipboard.writeText(r.text).then(() => toast("Скопировано", r.name))));
+    act.appendChild(mkBtn("⬇", () => downloadFile(r)));
+  }
+  $("#tbody").appendChild(tr);
+}
+
+function downloadFile(r){
+  download(r.name, r.blob || r.text, MIME[state.fmt]);
+}
+
+function download(name, content, mime){
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mime || "application/octet-stream" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+
+function makePdfBlob(title, url, text){
+  try{
+    const J = window.jspdf && window.jspdf.jsPDF;
+    if(!J){ toast("PDF недоступен", "нет jsPDF (CDN?) — сохранён как TXT", "warn"); return null; }
+    const pdf = new J({ unit: "pt", format: "a4" });
+    const W = pdf.internal.pageSize.getWidth() - 72, H = pdf.internal.pageSize.getHeight();
+    pdf.setFontSize(15); pdf.text(String(title).slice(0, 78), 36, 46);
+    pdf.setFontSize(8); pdf.text(String(url).slice(0, 120), 36, 60);
+    pdf.setFontSize(10);
+    let y = 82;
+    String(text).split("\n").forEach(line => {
+      const wrapped = pdf.splitTextToSize(String(line).replace(/\t/g, "    "), W);
+      wrapped.forEach(w => { if(y > H - 42){ pdf.addPage(); y = 56; } pdf.text(w, 36, y);

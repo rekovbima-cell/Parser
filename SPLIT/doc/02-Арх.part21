@@ -1,0 +1,53 @@
+_text(strip=True)
+            if txt:
+                lines.append(f"- {txt}")
+        elif el.name == "p":
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(txt)
+    return "\n\n".join(lines) if lines else soup.get_text("\n", strip=True)
+
+def fetch_html(url, headers):
+    import requests
+    resp = requests.get(url, headers=headers, timeout=25, allow_redirects=True)
+    ctype = resp.headers.get("content-type", "") or ""
+    m = re.search(r'charset=([\w\-]+)', ctype, re.I)
+    if m:
+        try:
+            resp.encoding = m.group(1)
+        except Exception:
+            resp.encoding = "utf-8"
+    else:
+        resp.encoding = (resp.apparent_encoding or "utf-8")
+    resp.raise_for_status()
+    return resp.text, resp.status_code
+
+def fetch_bytes(url, headers):
+    import requests
+    resp = requests.get(url, headers=headers, timeout=40, allow_redirects=True)
+    resp.raise_for_status()
+    return resp.content
+
+
+# ==============================================================================
+# ОСНОВНАЯ ЛОГИКА СКРАПИНГА
+# ==============================================================================
+def scrape_one(url, fmt, out_dir, settings, log_cb, should_stop=None, browser_manager=None):
+    """Скрапит один URL с поддержкой внешних браузеров."""
+    stop = should_stop or (lambda: False)
+    result = {
+        "url": url, "title": "", "status": "failed", "format": fmt,
+        "file": None, "size_bytes": 0, "word_count": None,
+        "blocked_suspected": False, "method": "playwright",
+        "attempts": 0, "error": None, "elapsed_sec": 0.0,
+    }
+    t0 = time.time()
+
+    ok_dns, dns_err = quick_dns_check(url)
+    if not ok_dns:
+        result["error"] = dns_err
+        result["elapsed_sec"] = round(time.time() - t0, 2)
+        log_cb(f"   ❌ {dns_err}")
+        return result
+
+    file_path = reserve_path(out_dir, sanitize(url

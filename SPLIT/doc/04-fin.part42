@@ -1,0 +1,36 @@
+remote-debugging-port={port} '
+                     f'--remote-debugging-address=127.0.0.1 --user-data-dir="C:\\mt_profile"', "mut")
+
+    def test_browser(self):
+        threading.Thread(target=self.testbrowser_worker, daemon=True).start()
+
+    def testbrowser_worker(self):
+        name = self.selected_browser.get()
+        self.log("=" * 60)
+        self.log(f"🧪 ТЕСТ БРАУЗЕРА: {name}")
+        try:
+            from playwright.syncapi import syncplaywright
+        except Exception as e:
+            self.log(f"❌ playwright не импортируется: {e}", "err")
+            return
+        plan = self.browsermanager.buildplan(
+            name, self.profilepathvar.get().strip(), bool(self.use_profile.get()),
+            bool(self.attachcdp.get()), self.spin(self.cdp_port, 9222, 1024, 65535),
+            bool(self.headless.get()), bool(self.copyprofile.get()), logcb=self.log)
+        plan["headless"] = bool(self.headless.get())
+        self.log(f"   план: mode={plan['mode']} engine={plan['engine']} "
+                 f"exe={plan['executablepath'] or '—'} profile={plan['userdata_dir'] or '—'}")
+        ua = random_ua()
+        locale, tz = randomlocaletz()
+        try:
+            with sync_playwright() as p:
+                session = openwith_fallback(p, plan, ua, locale, tz,
+                                              random.choice(VIEWPORTS),
+                                              bool(self.stealth.get()), self.log)
+                try:
+                    page = session.new_page()
+                    page.goto("https://example.com", wait_until="domcontentloaded", timeout=30000)
+                    page.waitfortimeout(600)
+                    self.log(f"   ✅ страница открыта: {page.title()}", "ok")
+                    info = page.evaluate("() => ({ua: navigator.userAgent, wd: navigator.webdriver, "
+                                          "plat: navigator.platform, la

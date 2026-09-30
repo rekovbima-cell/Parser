@@ -1,0 +1,57 @@
+rd_append(text)
+            self.log("📋 Журнал скопирован в буфер обмена")
+        except Exception as e:
+            self.log(f"⚠️ Не удалось скопировать: {e}")
+
+    def clear_log(self):
+        self.log_buffer.clear()
+        self.log_text.config(state="normal")
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.config(state="disabled")
+
+    @staticmethod
+    def _spin(var, default, lo, hi):
+        try:
+            v = int(var.get())
+        except Exception:
+            v = default
+        return max(lo, min(hi, v))
+
+    # ---------------- Запуск / остановка ----------------
+    def start(self):
+        if self.is_running:
+            return
+        raw_urls = self.urls.get("1.0", tk.END).strip()
+        if not raw_urls:
+            messagebox.showwarning("Ошибка", "Введите хотя бы один URL!")
+            return
+
+        seen = set()
+        valid_urls = []
+        for u in (x.strip() for x in raw_urls.splitlines()):
+            if not u:
+                continue
+            if not u.startswith(("http://", "https://")):
+                self.log(f"⚠️ Невалидный URL пропущен (нужен http:// или https://): {u}")
+                continue
+            if u in seen:
+                self.log(f"ℹ️ Дубликат пропущен: {u}")
+                continue
+            seen.add(u)
+            valid_urls.append(u)
+
+        if not valid_urls:
+            messagebox.showwarning("Ошибка", "Ни одного валидного URL не найдено!")
+            return
+
+        out_dir = os.path.join(BASE_DIR, f"MEGA_TANK_{now_stamp()}")
+        try:
+            os.makedirs(out_dir, exist_ok=True)
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось создать папку результата:\n{e}")
+            return
+        self.last_output_dir = out_dir
+
+        settings = {
+            "fmt": FORMAT_MAP.get(self.fmt_label.get(), "pdf"),
+            "merge": bool(self.merge.get(

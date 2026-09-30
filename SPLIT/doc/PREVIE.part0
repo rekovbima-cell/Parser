@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+PREVIEW_SERVER v1.0 — локальный сервер рендеринга для 00-bad-tank.html
+
+Почему он нужен: публичные CORS-прокси (allorigins и т.п.) НЕ выполняют
+JavaScript целевых страниц и часто блокируются. Этот сервер рендерит
+страницу настоящим браузером (Firefox Portable + Selenium) и отдаёт
+готовый HTML. 00-bad-tank.html автоматически пробует этот сервер
+ПЕРВЫМ (http://127.0.0.1:8765/render?url=...), а при неудаче откатывается
+на публичные прокси.
+
+Запуск:  python PREVIEW_SERVER.py
+Затем:   откройте http://127.0.0.1:8765/  (там же лежит 00-bad-tank.html)
+"""
+
+import json
+import os
+import sys
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse, parse_qs
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PORT = 8765
+TANK_FILE = os.path.join(BASE_DIR, "00-bad-tank.html")
+PAGE_TIMEOUT = 60
+JS_STABLE_TIMEOUT = 25
+
+USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+FIREFOX_PATH = os.path.join(BASE_DIR, "BROWSER", "FirefoxPortable", "FirefoxPortable.exe")
+BLOCKED_MARKERS = ["just a moment", "checking your browser", "access denied", "captcha", "403 forbidden"]
+
+_driver = None
+_driver_lock = threading.Lock()
+
+
+def log(msg):
+    print("[preview] %s" % msg, flush=True)
+
+
+def get_driver():
+    """Один переиспользуемый headless Firefox (Selenium)."""
+    global _driver
+    with _driver_lock:
+        if _driver is not None:
+            return _driver
+        try:
+            from selenium import webdriver
+            from selenium.webdriver.firefox.options import Options
+            from selenium.webdriver.firefox.service import Service
+            from webdriver_manager.firefox import GeckoDriverManager
+
+            options = Options()
+            if os.path.exists(F

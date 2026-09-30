@@ -1,0 +1,26 @@
+i) [[60](https://stackoverflow.com/questions/345281/is-there-a-way-to-force-firefox-to-launch-in-a-new-process), [61](https://portableapps.com/node/57110)].
+
+### 2.4. Цифровой отпечаток и Stealth-режим
+
+Использование внешнего браузера само по себе улучшает прохождение проверок, так как браузер имеет реальные аппаратные характеристики (WebGL, AudioContext, Fonts). Однако, если браузер запускается в режиме автоматизации, он может выдавать признаки бота (например, `navigator.webdriver = true`). Система должна применять адаптивные stealth-скрипты, которые маскируют признаки автоматизации, при этом учитывая различия между движками Blink и Gecko [[34](https://scrapfly.io/blog/posts/how-browser-fingerprinting-works), [42](https://github.com/daijro/camoufox)].
+
+## 3. Архитектура решения: ExternalBrowserManager
+
+Центральным элементом новой архитектуры является класс `ExternalBrowserManager`. Этот компонент отвечает за обнаружение установленных портативных браузеров, определение их типа движка и выбор стратегии запуска.
+
+### 3.1. Механизм обнаружения браузеров
+
+Менеджер осуществляет рекурсивный поиск исполняемых файлов в заданных директориях (текущая папка, папка PortableApps). Для каждого найденного браузера определяется:
+*   Путь к исполняемому файлу.
+*   Тип движка (chromium/firefox).
+*   Путь к директории профиля по умолчанию.
+*   Специфические аргументы командной строки.
+
+| Браузер | Исполняемый файл | Движок | Аргумент профиля | Путь профиля по умолчанию |
+| :--- | :--- | :--- | :--- | :--- |
+| Chrome Portable | GoogleChromePortable.exe | chromium | --user-data-dir | Data/profile |
+| Firefox Portable | FirefoxPortable.exe | firefox | -profile | Data/profile |
+| LibreWolf Portable | librewolf.exe | firefox | -profile | Data/profile |
+| Chromium Portable | chrome.exe | chromium | --user-data-dir | Data/profile |
+
+*Таблица 1. Конфигурация поддерживаемых портативных браузеров

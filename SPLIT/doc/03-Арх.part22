@@ -1,0 +1,26 @@
+нно для представления одного согласованного цифрового удостоверения устройства.
+              </p>
+            </div>
+
+            <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+              <div class="flex items-center space-x-3 mb-4">
+                <i data-lucide="mouse-pointer-click" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                <h4 class="text-base font-semibold text-primary-700 dark:text-primary-300" data-ref="https://github.com/daijro/camoufox|42">Имитация поведения</h4>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                Camoufox использует порт библиотеки Cursory для имитации движения мыши. Вместо простого алгоритма он воспроизводит записи человеческих движений, включая их уникальное время, паузы и перекрытия, чтобы создать более реалистичное поведение.
+              </p>
+            </div>
+
+            <div class="card-interactive p-6 bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl shadow-md">
+              <div class="flex items-center space-x-3 mb-4">
+                <i data-lucide="database" class="w-6 h-6 text-accent-600 dark:text-accent-400"></i>
+                <h4 class="text-base font-semibold text-accent-700 dark:text-accent-300" data-ref="https://stackoverflow.com/questions/79582148/how-to-avoid-detection-when-using-cdp-chrome-devtools-protocol-with-playwright|43">CDP-обнаружение</h4>
+              </div>
+              <p class="text-gray-700 dark:text-gray-300 text-sm">
+                Веб-сайты, которые обнаруживают автоматизацию браузеров, могут специально идентифицировать использование Chrome DevTools Protocol (CDP). Пользователи сообщили, что их боты Playwright были помечены как боты, даже когда все методы спуфинга отпечатков работали.
+              </p>
+            </div>
+          </div>
+
+      

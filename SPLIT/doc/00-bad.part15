@@ -1,0 +1,38 @@
+e="padding:3px 9px">idle</span>
+        </h2>
+        <div class="body">
+          <div class="prog-top">
+            <div class="prog-pct"><span id="pct">0</span><span style="font-size:15px;color:var(--dim)">%</span></div>
+            <div class="prog-meta">
+              <div>готово <b id="mDone">0</b> / <b id="mTotal">0</b> · поток <b id="mThr">0</b></div>
+              <div>ETA <b id="mEta">—</b> · прошло <b id="mElapsed">0.0s</b></div>
+            </div>
+          </div>
+          <div class="bar" id="barWrap"><i id="barFill"></i></div>
+          <div class="stats" style="margin-top:14px">
+            <div class="stat ok"><div class="k">Успешно</div><div class="v" id="sOk">0</div></div>
+            <div class="stat fail"><div class="k">Ошибок</div><div class="v" id="sFail">0</div></div>
+            <div class="stat block"><div class="k">Блок/капча</div><div class="v" id="sBlock">0</div></div>
+            <div class="stat info"><div class="k">Объём</div><div class="v" id="sSize">0 Б</div></div>
+            <div class="stat vio"><div class="k">Слов</div><div class="v" id="sWords">0</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>
+          <span class="h2-l">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+            Результаты
+          </span>
+          <span class="badge" id="resCount" style="padding:3px 9px">0 файлов</span>
+        </h2>
+        <div class="tbl-scroll" id="tblScroll">
+          <table id="tbl" style="display:none">
+            <thead><tr>
+              <th>#</th><th>Заголовок / URL</th><th>Статус</th><th>Файл</th><th>Размер</th><th>Слов</th><th>Метод</th><th>Действия</th>
+            </tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+          <div class="empty" id="emptyState">
+            <svg viewBox="0 0 24 24"><path d="M1

@@ -1,0 +1,45 @@
+работает только с явным user-data-dir; порт — только 127.0.0.1.
+   6. Жизненный цикл: подключённый браузер пользователя НИКОГДА не закрывается
+      скриптом (owns_browser=False), закрывается только наша вкладка.
+   7. PROFILE_LOCK: один user-data-dir не может быть открыт двумя процессами,
+      поэтому при работе с профилем/CDP потоки сериализуются автоматически.
+   8. PDF на Gecko: page.pdf() существует только в Chromium → рендер сохранённого
+      HTML отдельным headless-Chromium, иначе деградация в .html с пометкой.
+
+ ГОРЯЧИЕ ПРАВКИ ЯДРА (унаследованы от hotfix-сборки):
+   • UTF-8 в консоли Windows (иначе краш на эмодзи ДО открытия GUI)
+   • «Агрессивный режим» больше НЕ делает паузы длиннее щадящего (была инверсия)
+   • Атомарное резервирование имён файлов между потоками (PATH_LOCK)
+   • safexmltext() — python-docx падал на управляющих символах XML
+   • locale / Accept-Language / navigator.languages / --lang согласованы
+   • merge_pdf() не падает целиком из-за одного битого или зашифрованного PDF
+   • requests-фоллбэк читает charset из Content-Type (кириллица без можибаки)
+   • absolutize() — относительные href/src больше не ведут в никуда
+   • browser.close() в finally — нет зависших процессов
+================================================================================
+"""
+
+import sys
+import os
+import subprocess
+import importlib
+import threading
+import queue
+import time
+import random
+import re
+import json
+import socket
+import shutil
+import webbrowser
+from datetime import datetime
+from urllib.parse import urlparse, urljoin
+
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+
+==============================================================================
+ГЛУШКА КОНСОЛИ (Windows cp866/cp1251 → UnicodeEncodeError на эмодзи)
+==============================================================================
+def fixconsole():
+    for stream in (sys.std

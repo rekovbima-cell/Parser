@@ -1,0 +1,15 @@
+.*
+
+### 3.2. Стратегия запуска и подключения
+
+Логика `launch_or_connect` реализует следующий алгоритм принятия решений:
+
+1.  **Проверка CDP (только для Chromium):** Если выбран браузер на базе Chromium и режим не headless, скрипт пытается подключиться к `localhost:9222`. Если соединение успешно, используется метод `connect_over_cdp`, что позволяет работать с активной сессией пользователя без перезапуска браузера [[1](https://www.browserless.io/blog/chrome-remote-debugging), [4](https://mcpservers.org/servers/Rainmen-xia/chrome-debug-mcp-server)].
+2.  **Запуск внешнего исполняемого файла:** Если подключение не удалось или выбран Firefox, происходит запуск нового процесса.
+    *   Для **Chromium**: используются флаги `--no-sandbox`, `--disable-dev-shm-usage` и указание `--user-data-dir`.
+    *   Для **Firefox**: добавляется флаг `-no-remote` для разрешения параллельных запусков и `-profile` для указания пути к данным [[27](https://yashaka.github.io/selene/faq/custom-user-profile-howto/), [60](https://stackoverflow.com/questions/345281/is-there-a-way-to-force-firefox-to-launch-in-a-new-process)].
+3.  **Инициализация контекста:** После запуска браузера создается новый контекст Playwright. Для Chromium применяется stealth-скрипт, подменяющий `navigator.webdriver` и другие свойства. Для Firefox используются специфические предпочтения (`firefox_user_prefs`), хотя полная эмуляция stealth-режима в Gecko сложнее из-за архитектурных отличий [[6](https://playwright.dev/python/docs/api/class-browsertype), [42](https://github.com/daijro/camoufox)].
+
+### 3.3. Управление жизненным циклом процессов
+
+Критически важным аспектом является корректное завершение работы. При использовании стандартного bundled Chromium браузер закрывается после завершения задачи. Однако при работе с внешними браузерами, особенно в режиме подключения к живой сессии, закрытие браузера скриптом недопустимо, так 

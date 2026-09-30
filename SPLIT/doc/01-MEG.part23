@@ -1,0 +1,42 @@
+ем манифест в исходном порядке URL для предсказуемости
+        order = {u: i for i, u in enumerate(urls)}
+        manifest.sort(key=lambda r: order.get(r["url"], 999999))
+
+        ok_results = [r for r in manifest if r["status"] == "ok"]
+        merged_filename = None
+
+        if settings["merge"] and ok_results and not self.stop_event.is_set():
+            self.log("\n" + "=" * 60)
+            self.log("🔗 ОБЪЕДИНЕНИЕ ФАЙЛОВ...")
+            self.log("=" * 60)
+            fmt = settings["fmt"]
+            merged_name = f"MEGA_FULL.{fmt}"
+            merged_path = os.path.join(out_dir, merged_name)
+            try:
+                if fmt == "pdf":
+                    merge_pdf(ok_results, out_dir, merged_path, self.log)
+                elif fmt in ("txt",):
+                    merge_text_like(ok_results, merged_path, fmt)
+                elif fmt == "md":
+                    merge_markdown(ok_results, merged_path)
+                elif fmt == "html":
+                    merge_html(ok_results, out_dir, merged_path)
+                elif fmt == "docx":
+                    merge_docx(ok_results, merged_path)
+                size = os.path.getsize(merged_path)
+                self.log(f"   ✅ Объединённый файл: {human_size(size)} -> {merged_name}")
+                merged_filename = merged_name
+            except Exception as e:
+                self.log(f"   ❌ Ошибка объединения: {e}")
+
+        try:
+            write_manifest_and_index(manifest, out_dir, merged_filename)
+            self.log("\n📊 manifest.json и INDEX.md записаны")
+        except Exception as e:
+            self.log(f"⚠️ Не удалось записать manifest/index: {e}")
+
+        self.log("\n" + "=" * 60)
+        status_word = "ОСТАНОВЛЕНО" if self.stop_event.is_set() else "ГОТОВО"
+        self.log(f"🎉 {status_word}! Успешно: {counters['ok']} | Ошибок: {counters['fail']}")
+        self.log(f"📁 Папка: {out_dir}")
+      

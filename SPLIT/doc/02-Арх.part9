@@ -1,0 +1,47 @@
+LES = [(8, 8), (12, 8), (4, 4), (16, 8), (8, 4)]
+
+PATH_LOCK = threading.Lock()
+RESERVED_PATHS = set()
+
+CONTENT_SELECTOR = ("article, main, [role='main'], .article, .post, "
+                    ".entry-content, .post-content, .content")
+
+JUNK_SELECTOR = ("script, style, noscript, template, svg, canvas, iframe, "
+                 "nav, header, footer, aside, [aria-hidden=\"true\"], "
+                 "[role=\"navigation\"], [role=\"banner\"], [role=\"contentinfo\"], "
+                 ".cookie, .cookies, .consent, .popup, .modal, .advert, .ads, .ad, "
+                 ".social-share")
+
+# ==============================================================================
+# МЕНЕДЖЕР ВНЕШНИХ БРАУЗЕРОВ
+# ==============================================================================
+class ExternalBrowserManager:
+    """
+    Управляет обнаружением, запуском и подключением к внешним портативным 
+    браузерам и пользовательским профилям.
+    """
+    
+    # Шаблоны поиска для популярных портативных браузеров
+    PORTABLE_PATTERNS = {
+        "Chrome Portable": {
+            "exe_names": ["GoogleChromePortable.exe", "chrome.exe"],
+            "paths": ["GoogleChromePortable/App/Chrome-bin", "ChromePortable"],
+            "engine": "chromium",
+            "profile_arg": "--user-data-dir",
+            "default_profile": "Data/profile"
+        },
+        "Firefox Portable": {
+            "exe_names": ["FirefoxPortable.exe", "firefox.exe"],
+            "paths": ["FirefoxPortable/App/Firefox64", "FirefoxPortable"],
+            "engine": "firefox",
+            "profile_arg": "-profile",
+            "default_profile": "Data/profile"
+        },
+        "LibreWolf Portable": {
+            "exe_names": ["librewolf.exe"],
+            "paths": ["LibreWolfPortable"],
+            "engine": "firefox",
+            "profile_arg": "-profile",
+            "default_profile": "Data/profile"
+        },
+  

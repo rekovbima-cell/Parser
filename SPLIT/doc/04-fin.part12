@@ -1,0 +1,44 @@
+ine"] = cfg["engine"]
+        plan["channel"] = cfg.get("channel")
+        plan["executable_path"] = cfg["exe"]
+        plan["label"] = cfg["name"]
+
+        if cfg["engine"] == "firefox":
+            plan["warnings"].append(
+                "Playwright управляет Firefox через Juggler и требует патченной сборки; "
+                "внешний Firefox/LibreWolf обычно не запускается — будет фоллбэк")
+            cb("ℹ️ Выбран Gecko-движок. Playwright работает только со своей сборкой "
+               "Firefox: внешний Firefox/LibreWolf будет尝试 запущен, при отказе — "
+               "автоматический фоллбэк на bundled Firefox/Chromium.")
+
+        eff_profile = ""
+        if profile_path:
+            effprofile = profilepath
+        elif cfg.get("profile_dir"):
+            effprofile = cfg["profiledir"]
+
+        if effprofile and useprofile:
+            eff, iscopy = self.prepareprofile(effprofile, copyprofile, cb)
+            plan["userdatadir"] = eff
+            plan["mode"] = "persistent"
+            plan["profileiscopy"] = is_copy
+            plan["serial"] = True
+            cb(f"👤 Профиль: {eff}" + ("  (изолированная копия)" if is_copy else ""))
+        else:
+            plan["mode"] = "executable"
+            plan["serial"] = False
+
+        if cfg["engine"] == "chromium":
+            args = ["--no-first-run", "--no-default-browser-check",
+                    "--disable-blink-features=AutomationControlled"]
+            if not headless:
+                args.append("--remote-debugging-address=127.0.0.1")
+            plan["args"] = args
+        else:
+            plan["args"] = ["-no-remote"]     # обход single-instance lock Portable
+        return plan
+
+    # --------------------------------------------------------------- profile
+    def prepareprofile(self, profilepath, copy_profile, cb):
+        """Возвращает (effectivedir, iscopy). Создаёт каталог или его копию."""
+      

@@ -1,0 +1,21 @@
+ rounded-r-lg">
+                      <p class="text-sm font-medium text-amber-900 dark:text-amber-100 leading-relaxed" data-ref="https://roundproxies.com/blog/authentication-playwright/|39">
+                        <i data-lucide="triangle-alert" class="inline-block w-4 h-4 mr-1.5 -mt-0.5"></i>
+                        Общий подвох: Устаревшие состояния аутентификации. Рекомендуется реализовать проверку в скрипте настройки для верификации возраста существующего файла состояния. Если файл старше типичного времени жизни сессии (например, 24 часа), скрипт должен удалить старый файл и выполнить свежую процедуру входа для получения действительного состояния.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="hs-accordion card-interactive bg-white/80 backdrop-blur-sm dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <button class="hs-accordion-toggle w-full flex justify-between items-center p-4 text-left hover:bg-primary-50 dark:hover:bg-gray-700/50 transition-colors rounded-xl" id="hs-profile-3">
+                  <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center">
+                      <i data-lucide="layers" class="w-6 h-6 text-primary-600 dark:text-primary-400"></i>
+                    </div>
+                    <span class="font-semibold text-lg text-primary-700 dark:text-primary-300">Многопрофильная поддержка</span>
+                  </div>
+                  <i data-lucide="chevron-down" class="hs-accordion-active:rotate-180 transition-transform duration-300 w-5 h-5 text-primary-600 dark:text-primary-400"></i>
+                </button>
+                <div id="hs-collapse-profile-3" class="hs-accordion-c

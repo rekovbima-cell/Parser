@@ -1,0 +1,40 @@
+                  f.write(full_md)
+                    result["word_count"] = len(full_md.split())
+                    result["_text"] = full_md
+                elif fmt == "docx":
+                    from docx import Document
+                    text_content = soup.get_text("\n", strip=True)
+                    doc = Document()
+                    doc.add_heading(safe_xml_text(title or url), 0)
+                    doc.add_paragraph(safe_xml_text(f"Источник: {url} (запасной метод)"))
+                    for para in text_content.split('\n'):
+                        para = safe_xml_text(para).strip()
+                        if para:
+                            doc.add_paragraph(para)
+                    doc.save(file_path)
+                    result["word_count"] = len(text_content.split())
+                    result["_text"] = text_content
+
+                size = os.path.getsize(file_path)
+                result["status"] = "ok"
+                result["file"] = os.path.basename(file_path)
+                result["size_bytes"] = size
+                result["method"] = "requests-fallback"
+                result["error"] = None
+                log_cb(f"   ✅ (запасной метод) {fmt.upper()}: {human_size(size)}")
+            except Exception as e2:
+                result["error"] = f"{last_error} | fallback: {e2}"
+                log_cb(f"   ❌ Запасной метод тоже не сработал: {str(e2)[:120]}")
+    elif last_error and result["status"] != "ok":
+        result["error"] = last_error
+
+    result["elapsed_sec"] = round(time.time() - t0, 2)
+    return result
+
+
+# ==============================================================================
+# ОБЪЕДИНЕНИЕ ФАЙЛОВ (Без изменений, так как логика универсальна)
+# ==============================================================================
+def merge_pdf(ok_results, out_dir, out_path, log_cb):
+    from pypdf import PdfReader, PdfWriter
+    

@@ -1,0 +1,48 @@
+ontains('dark') ? dark : light;
+    let charts = {};
+    
+    const getColors = () => ({
+      primary: getThemeColor('hsl(210, 75%, 25%)', 'hsl(210, 75%, 65%)'),
+      accent: getThemeColor('hsl(240, 65%, 40%)', 'hsl(240, 65%, 65%)'),
+      text: getThemeColor('#374151', '#d1d5db'),
+      grid: getThemeColor('#e5e7eb', '#374151')
+    });
+    
+    const updateCharts = () => {
+      const { text, grid } = getColors();
+      
+      Object.values(charts).forEach(chart => {
+        if (chart?.options) {
+          if (chart.options.plugins?.legend?.labels) chart.options.plugins.legend.labels.color = text;
+          if (chart.options.plugins?.title) chart.options.plugins.title.color = text;
+          if (chart.options.scales) {
+            Object.values(chart.options.scales).forEach(scale => {
+              if (scale.ticks) scale.ticks.color = text;
+              if (scale.grid) scale.grid.color = grid;
+              if (scale.pointLabels) scale.pointLabels.color = text;
+              if (scale.title) scale.title.color = text;
+            });
+          }
+          chart.update('none');
+        }
+      });
+    };
+
+    // Data from https://botbrowser.io/en/blog/what-is-browser-fingerprinting/|33 - EFF Panopticlick study: 83.6% of browser configurations were uniquely identifiable
+    const cdpData = {
+      labels: ['Уникально идентифицируемые', 'Неуникальные'],
+      datasets: [{
+        label: 'Процент уникальных отпечатков',
+        data: [83.6, 16.4], // Exact data from https://botbrowser.io/en/blog/what-is-browser-fingerprinting/|33
+        backgroundColor: [
+          getThemeColor('hsl(210, 75%, 40%)', 'hsl(210, 75%, 55%)'),
+          getThemeColor('hsl(240, 65%, 55%)', 'hsl(240, 65%, 65%)')
+        ]
+      }]
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+      AOS.init({ duration: 800, once: true });
+      
+      con

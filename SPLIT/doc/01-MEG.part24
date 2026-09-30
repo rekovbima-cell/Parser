@@ -1,0 +1,40 @@
+  self.log("=" * 60)
+
+        self.set_progress(100)
+        self.ui_q.put(("done", {
+            "ok": counters["ok"], "fail": counters["fail"],
+            "out_dir": out_dir, "stopped": self.stop_event.is_set(),
+        }))
+
+    def _on_finished(self, payload):
+        self.is_running = False
+        self.btn.config(state="normal", text="🚀 НАЧАТЬ")
+        self.stop_btn.config(state="disabled", text="⛔ СТОП")
+        self.folder_btn.config(state="normal")
+        title = "Остановлено" if payload["stopped"] else "Готово"
+        messagebox.showinfo(
+            title,
+            f"✅ Успешно: {payload['ok']}\n❌ Ошибок: {payload['fail']}\n📁 Папка:\n{payload['out_dir']}",
+        )
+
+
+# ==============================================================================
+# ЗАПУСК
+# ==============================================================================
+if __name__ == "__main__":
+    installer = AutoInstaller()
+    deps_ok = installer.run()
+
+    if not deps_ok:
+        print("\n⚠️ Не все зависимости установлены — приложение может работать нестабильно.")
+        try:
+            answer = input("Запустить всё равно? (y/n): ").strip().lower()
+        except EOFError:
+            answer = "n"
+        if answer != "y":
+            input("\nНажмите Enter для выхода...")
+            sys.exit(1)
+
+    root = tk.Tk()
+    app = App(root)
+    root.mainloop()

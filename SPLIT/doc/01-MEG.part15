@@ -1,0 +1,49 @@
+e></head><body>
+<h1>📚 {APP_NAME} — Сводный экспорт ({len(ok_results)} источников)</h1>
+<nav><ul>{''.join(nav_items)}</ul></nav>
+{''.join(sections)}
+</body></html>"""
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(html_doc)
+
+
+def merge_docx(ok_results, out_path):
+    from docx import Document
+    doc = Document()
+    doc.add_heading(f'{APP_NAME} — Сводный экспорт', 0)
+    doc.add_paragraph(f"Источников: {len(ok_results)} | Сгенерировано: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    for i, r in enumerate(ok_results):
+        if i > 0:
+            doc.add_page_break()
+        doc.add_heading(r["title"] or r["url"], level=1)
+        doc.add_paragraph(f"Источник: {r['url']}")
+        text = r.get("_text", "")
+        for para in text.split('\n'):
+            if para.strip():
+                doc.add_paragraph(para.strip())
+    doc.save(out_path)
+
+
+def write_manifest_and_index(manifest, out_dir, merged_filename=None):
+    manifest_path = os.path.join(out_dir, "manifest.json")
+    clean = [{k: v for k, v in r.items() if not k.startswith("_")} for r in manifest]
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "app": APP_NAME, "version": APP_VERSION,
+                "generated": datetime.now().isoformat(timespec="seconds"),
+                "merged_file": merged_filename,
+                "sources": clean,
+            },
+            f, ensure_ascii=False, indent=2,
+        )
+
+    lines = [
+        f"# {APP_NAME} v{APP_VERSION} — отчёт о сборе\n",
+        f"Сгенерировано: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  ",
+        f"Всего источников: {len(clean)}\n",
+    ]
+    if merged_filename:
+        lines.append(f"**Объединённый файл:** [{merged_filename}](./{merged_filename})\n")
+    lines.append("| # | Заголовок | URL | Статус | Файл | Размер | Слов | Метод |")
+    lines.append("|---|---

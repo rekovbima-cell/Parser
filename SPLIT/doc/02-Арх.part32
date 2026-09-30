@@ -1,0 +1,47 @@
+to;}}
+table{{border-collapse:collapse;}} td,th{{border:1px solid #333;padding:6px;}}
+</style></head><body>
+<h1>📚 {APP_NAME} — Сводный экспорт ({len(ok_results)} источников)</h1>
+<nav><ul>{''.join(nav_items)}</ul></nav>
+{''.join(sections)}
+</body></html>"""
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(html_doc)
+
+def merge_docx(ok_results, out_path):
+    from docx import Document
+    doc = Document()
+    doc.add_heading(safe_xml_text(f'{APP_NAME} — Сводный экспорт'), 0)
+    doc.add_paragraph(safe_xml_text(
+        f"Источников: {len(ok_results)} | Сгенерировано: "
+        f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"))
+    for i, r in enumerate(ok_results):
+        if i > 0:
+            doc.add_page_break()
+        doc.add_heading(safe_xml_text(r["title"] or r["url"]), level=1)
+        doc.add_paragraph(safe_xml_text(f"Источник: {r['url']}"))
+        for para in r.get("_text", "").split('\n'):
+            para = safe_xml_text(para).strip()
+            if para:
+                doc.add_paragraph(para)
+    doc.save(out_path)
+
+def write_manifest_and_index(manifest, out_dir, merged_filename=None):
+    manifest_path = os.path.join(out_dir, "manifest.json")
+    clean = [{k: v for k, v in r.items() if not k.startswith("_")} for r in manifest]
+
+    ok_n = sum(1 for r in clean if r["status"] == "ok")
+    totals = {
+        "sources": len(clean),
+        "ok": ok_n,
+        "failed": len(clean) - ok_n,
+        "blocked_suspected": sum(1 for r in clean if r.get("blocked_suspected")),
+        "bytes": sum(int(r.get("size_bytes") or 0) for r in clean),
+        "words": sum(int(r.get("word_count") or 0) for r in clean),
+    }
+
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "app": APP_NAME, "version": APP_VERSION, "build": BUILD_DATE,
+                "generated": datetime.now().isoformat(timespec="s

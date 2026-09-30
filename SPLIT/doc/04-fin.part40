@@ -1,0 +1,35 @@
+                 padx=6, pady=4)
+        sb = ttk.Scrollbar(logframe, orient="vertical", command=self.logtext.yview)
+        self.log_text.configure(yscrollcommand=sb.set)
+        self.log_text.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+        for tag, color in (("ok", "#00ff88"), ("warn", "#ffb020"), ("err", "#ff5470"),
+                           ("info", "#9fd7ff"), ("mut", "#7a7a95")):
+            self.logtext.tagconfigure(tag, foreground=color)
+
+        # --- Статистика + папка ---
+        stats = tk.Frame(root, bg="#12121f")
+        stats.pack(fill="x", padx=20, pady=(2, 12))
+        self.ok_label = tk.Label(stats, text="✅ 0", font=("Segoe UI", 10, "bold"),
+                                 fg="#00ff88", bg="#12121f")
+        self.ok_label.pack(side="left", padx=(0, 18))
+        self.fail_label = tk.Label(stats, text="❌ 0", font=("Segoe UI", 10, "bold"),
+                                   fg="#ff4444", bg="#12121f")
+        self.fail_label.pack(side="left", padx=(0, 18))
+        self.blk_label = tk.Label(stats, text="⚠️ 0", font=("Segoe UI", 10, "bold"),
+                                  fg="#ffb020", bg="#12121f")
+        self.blk_label.pack(side="left")
+        self.folder_btn = tk.Button(stats, text="📂 Открыть папку результата",
+                                    command=self.openoutputfolder, state="disabled",
+                                    bg="#2d2d44", fg="white", relief="flat",
+                                    font=("Segoe UI", 9), cursor="hand2")
+        self.folder_btn.pack(side="right")
+
+        self.root.after(80, self.pollui)
+        self.root.after(200, self.startuplog)
+
+    # ---------------- браузерные помощники ----------------
+    def onbrowserpick(self, event=None):
+        cfg = self.browsermanager.find(self.selectedbrowser.get())
+        if cfg:
+            if cfg.get("profiledir") and not self

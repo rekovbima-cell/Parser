@@ -1,0 +1,38 @@
+4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            <div>Пока пусто. Вставьте URL и нажмите <b style="color:var(--acc)">НАЧАТЬ</b>.</div>
+            <div style="margin-top:6px">Каждый источник попадёт в <b>manifest.json</b> и <b>INDEX.md</b></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>
+          <span class="h2-l">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+            Журнал
+          </span>
+          <span class="logbar">
+            <button class="mbtn" data-filter="all" id="fAll">все</button>
+            <button class="mbtn" data-filter="ok">успех</button>
+            <button class="mbtn" data-filter="warn">warn</button>
+            <button class="mbtn" data-filter="err">ошибки</button>
+            <button class="mbtn" id="btnAuto" style="color:var(--acc);border-color:rgba(0,255,136,.4)">autoscroll</button>
+            <button class="mbtn" id="btnCopyLog">копировать</button>
+            <button class="mbtn" id="btnClearLog">очистить</button>
+          </span>
+        </h2>
+        <div class="logbox" id="log"></div>
+      </section>
+
+      <section class="panel">
+        <h2><span class="h2-l">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          Папка результата · MEGA_TANK_<span id="stampLbl">…</span></span></h2>
+        <div class="body">
+          <div class="dl">
+            <button class="btn btn-go" id="btnZip" disabled style="flex:1 1 230px">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              📂 Скачать папку (ZIP)
+            </button>
+            <button class="btn btn-ghost" id="btnMerged" disabled>
+        

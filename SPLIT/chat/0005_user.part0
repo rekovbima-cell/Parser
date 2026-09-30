@@ -1,0 +1,915 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+================================================================================
+ MEGA TANK v3.0 — UNIVERSAL DOCUMENTATION SCRAPER
+ Пересобран: 30.06.2026   |   Hotfix-сборка: 29.09.2026
+================================================================================
+ Что делает:
+   • Берёт список URL (по одному в строке)
+   • Сохраняет каждую страницу в PDF / HTML / TXT / DOCX / Markdown
+   • Может объединить всё в один файл (работает для ЛЮБОГО формата)
+   • Создаёт рядом с собой папку MEGA_TANK_<дата_время> и пишет ВСЁ туда:
+       - отдельные файлы по каждому URL
+       - объединённый файл (если включено)
+       - manifest.json  — машиночитаемая сводка
+       - INDEX.md        — человекочитаемая сводная таблица со ссылками
+       - RUN.log         — полный журнал прогона
+   • Зависимости ставит сама при первом запуске (включая браузер Chromium)
+
+ HOTFIX-ЛИСТ ЭТОЙ СБОРКИ (что было сломано и почему это критично):
+   1. UnicodeEncodeError в консоли Windows (cp866/cp1251) на эмодзи → краш
+      ДО открытия GUI. Теперь stdout/stderr переводятся в UTF-8 с errors=replace.
+   2. Агрессивный режим делал ПАУЗЫ ДЛИННЕЕ (8–15 с), а обычный — короче (3–7 с).
+      Логика была инвертирована относительно подписи чекбокса. Исправлено.
+   3. Гонка имён файлов: два потока могли одновременно зарезервировать один путь
+      (проверка os.path.exists не атомарна) → перезапись результата. Добавлен
+      PATH_LOCK + множество зарезервированных путей.
+   4. python-docx падает (ValueError) на управляющих символах XML
+      (\x00-\x08, \x0B, \x0C, \x0E-\x1F), которые реально встречаются в innerText.
+      Добавлен safe_xml_text() для всех DOCX-веток.
+   5. Заголовки/stealth-скрипт были несогласованы с locale: Accept-Language и
+      navigator.languages жёстко имели en-US, а --lang=en-US стоял даже для
+      en-GB/London. Теперь вся тройка (UA → platform → locale → headers → JS)
+      собирается из одного источника.
+   6. Утечка fingerprint'а: headless Linux-сборка отдавала navigator.platform
+      «Linux x86_64» при Windows-UA. Платформа, languages, hardwareConcurrency,
+      deviceMemory, plugins/mimeTypes теперь подделываются согласованно.
+   7. page.pdf() бросал исключение на части страниц (офисные вьюверы,
+      вертикальный скролл, таймаут) и весь URL уходил в ошибку. Добавлен
+      emulate_media("screen"), увеличен таймаут и бинарный фоллбэк для прямых
+      PDF-ссылок (content-type: application/pdf).
+   8. merge_pdf() падал целиком, если ОДИН файл был зашифрован/бит. Теперь
+      каждый файл оборачивается в try/except и пропускается с пометкой.
+   9. requests-фоллбэк читал кириллицу как ISO-8859-1 (можибака в TXT/MD/DOCX).
+      Теперь charset берётся из Content-Type, иначе — apparent_encoding.
+  10. Относительные ссылки в Markdown/объединённом HTML вели в никуда.
+      Добавлена абсолютизация href/src через urljoin от исходного URL.
+  11. Утечка процессов браузера при исключении до browser.close() + отсутствие
+      фоллбэка на системный Chrome/Edge, если bundled Chromium не докачан.
+
+ Сохранённое из v3.0:
+   • Параллельность 1–5 потоков, повторные попытки с ротацией UA/fingerprint'а
+   • Поэтапное ожидание вместо «networkidle навсегда» + доскролл lazy-load
+   • Эвристика блокировок (Cloudflare/капча/403/429), DNS-предпроверка
+   • Кнопки «Стоп» / «Открыть папку», потокобезопасный UI через очередь
+================================================================================
+"""
+
+import sys
+import os
+import subprocess
+import importlib
+import threading
+import queue
+import time
+import random
+import re
+import json
+import socket
+import webbrowser
+from datetime import datetime
+from urllib.parse import urlparse, urljoin
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+
+# ==============================================================================
+# ГЛУШКА КОНСОЛИ (Windows cp866/cp1251 → UnicodeEncodeError на эмодзи)
+# ==============================================================================
+def _fix_console():
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
+_fix_console()
+
+# ==============================================================================
+# КОНСТАНТЫ
+# ==============================================================================
+APP_NAME = "MEGA TANK"
+APP_VERSION = "3.0"
+BUILD_DATE = "30.06.2026"
+
+if getattr(sys, "frozen", False):          # собрано в .exe (PyInstaller)
+    BASE_DIR = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+
+REQUIRED_PACKAGES = [
+    ("requests", "requests"),
+    ("playwright", "playwright"),
+    ("pypdf", "pypdf"),
+    ("python-docx", "docx"),
+    ("beautifulsoup4", "bs4"),
+    ("markdownify", "markdownify"),
+]
+
+FORMAT_MAP = {
+    "PDF": "pdf",
+    "HTML": "html",
+    "TXT": "txt",
+    "DOCX": "docx",
+    "Markdown": "md",
+}
+
+BLOCKED_MARKERS = [
+    "just a moment", "checking your browser", "attention required",
+    "access denied", "are you a robot", "captcha", "cloudflare",
+    "rate limit exceeded", "403 forbidden", "request blocked",
+    "unusual traffic", "verify you are human", "bot detection",
+]
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+]
+
+# Согласованные пары locale/timezone. Из locale теперь выводятся И Accept-Language,
+# И navigator.languages, И --lang: одна точка правды, ноль противоречий.
+LOCALE_TZ_PAIRS = [
+    ("en-US", "America/New_York"),
+    ("en-US", "America/Los_Angeles"),
+    ("en-US", "America/Chicago"),
+    ("en-GB", "Europe/London"),
+]
+
+VIEWPORTS = [
+    {"width": 1920, "height": 1080},
+    {"width": 1536, "height": 864},
+    {"width": 1440, "height": 900},
+    {"width": 1366, "height": 768},
+]
+
+# (hardwareConcurrency, deviceMemory) — правдоподобные значения; headless иногда
+# отдаёт 0/1, что само по себе является сигнатурой автоматизации.
+HARDWARE_PROFILES = [(8, 8), (12, 8), (4, 4), (16, 8), (8, 4)]
+
+# Резервирование имён файлов между потоками (проверка exists() не атомарна)
+PATH_LOCK = threading.Lock()
+RESERVED_PATHS = set()
+
+CONTENT_SELECTOR = ("article, main, [role='main'], .article, .post, "
+                    ".entry-content, .post-content, .content")
+
+JUNK_SELECTOR = ("script, style, noscript, template, svg, canvas, iframe, "
+                 "nav, header, footer, aside, [aria-hidden=\"true\"], "
+                 "[role=\"navigation\"], [role=\"banner\"], [role=\"contentinfo\"], "
+                 ".cookie, .cookies, .consent, .popup, .modal, .advert, .ads, .ad, "
+                 ".social-share")
+
+# ==============================================================================
+# STEALTH: собирается ПОД КАЖДУЮ ПОПЫТКУ, чтобы JS-отпечаток совпадал с HTTP
+# ==============================================================================
+STEALTH_TEMPLATE = r"""
+(() => {
+    const LANGS    = __LANGS__;
+    const PLATFORM = __PLATFORM__;
+    const HW       = __HW__;
+    const MEM      = __MEM__;
+    const VENDOR   = 'Google Inc.';
+
+    // 1) navigator.webdriver — сначала пытаемся стереть из прототипа, потом глушим геттер
+    try { delete Object.getPrototypeOf(navigator).webdriver; } catch (e) {}
+    try { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); } catch (e) {}
+
+    // 2) Согласованные platform / languages / железо
+    try { Object.defineProperty(navigator, 'platform', { get: () => PLATFORM }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'languages', { get: () => LANGS }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'vendor', { get: () => VENDOR }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => HW }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'deviceMemory', { get: () => MEM }); } catch (e) {}
+
+    // 3) plugins / mimeTypes (headless Chromium их не имеет) — array-like, как живой
+    const mk = (name, filename, description, length) =>
+        ({ name, filename, description, length, item: () => null, namedItem: () => null });
+    const pluginArr = [
+        mk('Chrome PDF Plugin',  'internal-pdf-viewer',                'Portable Document Format', 1),
+        mk('Chrome PDF Viewer',  'mhjfbmdgcfjbbpaeojofohoefgiehjai',    '',                         1),
+        mk('Native Client',      'internal-nacl-plugin',                '',                         2)
+    ];
+    pluginArr.item      = (i) => pluginArr[i] || null;
+    pluginArr.namedItem = (n) => pluginArr.filter(p => p.name === n)[0] || null;
+    pluginArr.refresh   = () => {};
+    try { Object.defineProperty(navigator, 'plugins', { get: () => pluginArr }); } catch (e) {}
+    try { Object.defineProperty(navigator, 'mimeTypes', { get: () => [] }); } catch (e) {}
+
+    // 4) window.chrome — у настоящего Chrome есть, у headless часто отсутствует
+    window.chrome = window.chrome || { runtime: {}, loadTimes: () => ({}), csi: () => ({}) };
+
+    // 5) permissions.query не должен выдавать автоматизацию
+    try {
+        const origQuery = window.navigator.permissions && window.navigator.permissions.query;
+        if (origQuery) {
+            window.navigator.permissions.query = (parameters) => (
+                parameters && parameters.name === 'notifications'
+                    ? Promise.resolve({ state: (typeof Notification !== 'undefined' && Notification.permission) || 'granted' })
+                    : origQuery(parameters)
+            );
+        }
+    } catch (e) {}
+
+    // 6) WebGL vendor/renderer (и WebGL2, иначе второй контекст сдаст подлинное)
+    try {
+        const patch = (proto) => {
+            if (!proto) return;
+            const orig = proto.getParameter;
+            proto.getParameter = function (parameter) {
+                if (parameter === 37445) return 'Intel Inc.';
+                if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+                return orig.call(this, parameter);
+            };
+        };
+        patch(window.WebGLRenderingContext && WebGLRenderingContext.prototype);
+        patch(window.WebGL2RenderingContext && WebGL2RenderingContext.prototype);
+    } catch (e) {}
+})();
+"""
+
+DISMISS_JS = r"""
+() => {
+    const words = ['accept all', 'accept', 'agree', 'i agree', 'got it', 'okay', 'ok',
+                   'reject all', 'no thanks', 'close', 'dismiss',
+                   'принять все', 'принять', 'согласен', 'согласна', 'понятно', 'закрыть', 'отклонить'];
+    const nodes = Array.from(document.querySelectorAll(
+        'button, input[type="button"], input[type="submit"], [role="button"]'));
+    let clicked = 0;
+    for (const n of nodes) {
+        const t = ((n.innerText || n.value || n.getAttribute('aria-label') || '') + '').trim().toLowerCase();
+        if (!t || t.length > 40) continue;
+        if (words.some(w => t === w || t.indexOf(w) === 0)) {
+            try {
+                const r = n.getBoundingClientRect();
+                if (r.width > 0 && r.height > 0) { n.click(); clicked++; }
+            } catch (e) {}
+            if (clicked >= 2) break;
+        }
+    }
+    return clicked;
+}
+"""
+
+
+# ==============================================================================
+# АВТОУСТАНОВКА ЗАВИСИМОСТЕЙ
+# ==============================================================================
+class AutoInstaller:
+    def __init__(self):
+        self.missing = []
+        self.installed = []
+
+    # ---------- базовые пакеты ----------
+    def check(self, pkg, imp):
+        try:
+            importlib.import_module(imp)
+            self.installed.append(pkg)
+            return True
+        except ImportError:
+            self.missing.append(pkg)
+            return False
+
+    def _pip(self, args):
+        return subprocess.check_call(
+            [sys.executable, "-m", "pip"] + args,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            creationflags=CREATE_NO_WINDOW,
+        )
+
+    def install(self, pkg):
+        print(f"📦 Установка {pkg}...")
+        base = ["install", pkg, "--upgrade", "--disable-pip-version-check", "--quiet"]
+        for attempt in (base, base + ["--user"]):
+            try:
+                self._pip(attempt)
+                print(f"   ✅ {pkg}")
+                return True
+            except Exception:
+                continue
+        # последний шанс: без --quiet, чтобы пользователь увидел реальную причину
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", pkg, "--upgrade"],
+                                  creationflags=CREATE_NO_WINDOW)
+            print(f"   ✅ {pkg}")
+            return True
+        except Exception as e:
+            print(f"   ❌ {pkg}: {e}")
+            return False
+
+    # ---------- браузер ----------
+    def chromium_ready(self):
+        """Проверяет, что Chromium реально запускается, а не только импортируется."""
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                b = launch_chromium(p, build_launch_args("en-US"))
+                b.close()
+            return True
+        except Exception:
+            return False
+
+    def install_browsers(self):
+        print("🌐 Установка браузера Chromium для Playwright...")
+        for extra in ([], ["--with-deps"]):
+            try:
+                subprocess.check_call(
+                    [sys.executable, "-m", "playwright", "install", "chromium"] + extra,
+                    creationflags=CREATE_NO_WINDOW,
+                )
+                print("   ✅ Chromium установлен")
+                return True
+            except Exception as e:
+                print(f"   ⚠️ playwright install {' '.join(extra) or '(basic)'}: {e}")
+        return False
+
+    def run(self):
+        print("=" * 70)
+        print(f"🔍 {APP_NAME} v{APP_VERSION} — ПРОВЕРКА ЗАВИСИМОСТЕЙ")
+        print("=" * 70)
+
+        for pkg, imp in REQUIRED_PACKAGES:
+            ok = self.check(pkg, imp)
+            print(f"{'✅' if ok else '❌'} {pkg}")
+
+        if self.missing:
+            print("\n" + "=" * 70)
+            print(f"🚀 УСТАНАВЛИВАЮ {len(self.missing)} ПАКЕТ(ОВ)...")
+            print("=" * 70)
+            for p in list(self.missing):
+                if self.install(p):
+                    self.missing.remove(p)
+
+        if not self.chromium_ready():
+            print("\n" + "=" * 70)
+            print("🌐 БРАУЗЕР НЕ ГОТОВ — УСТАНАВЛИВАЮ CHROMIUM...")
+            print("=" * 70)
+            self.install_browsers()
+            if not self.chromium_ready():
+                print("   ℹ️ bundled Chromium недоступен — будет попытка использовать "
+                      "системный Chrome / Edge (channel=...).")
+                self.missing.append("chromium-browser")
+
+        print("\n" + "=" * 70)
+        if not self.missing:
+            print("✅ ВСЁ ГОТОВО! Запускаю интерфейс...")
+        else:
+            print(f"⚠️ Не установлено: {', '.join(self.missing)}")
+            print("   Попробуй запустить файл ещё раз или установить вручную:")
+            print(f"   {sys.executable} -m pip install " + " ".join(self.missing))
+        print("=" * 70)
+        return len(self.missing) == 0
+
+
+# ==============================================================================
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# ==============================================================================
+def sanitize(name):
+    name = re.sub(r'^https?://', '', name)
+    name = re.sub(r'[^\w\-_.]', '_', name)
+    name = name.strip('_')
+    while "__" in name:
+        name = name.replace("__", "_")
+    return (name or "page")[:80]          # 80, а не 100: запас под MAX_PATH в Windows
+
+
+def slugify(text):
+    text = re.sub(r'[^\w\-]+', '-', str(text).strip().lower())
+    return re.sub(r'-+', '-', text).strip('-')[:60] or "source"
+
+
+def human_size(num_bytes):
+    num_bytes = float(num_bytes or 0)
+    for unit in ("Б", "КБ", "МБ", "ГБ"):
+        if num_bytes < 1024:
+            return f"{int(num_bytes)} {unit}" if unit == "Б" else f"{num_bytes:.1f} {unit}"
+        num_bytes /= 1024
+    return f"{num_bytes:.1f} ТБ"
+
+
+def now_stamp():
+    return datetime.now().strftime("%Y-%m-%d_%H%M%S")
+
+
+def safe_xml_text(s):
+    """python-docx падает на управляющих символах XML. Вырезаем только их,
+    табуляцию и перевод строки оставляем (мы их сами нормализуем позже)."""
+    return re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', str(s or ''))
+
+
+def reserve_path(out_dir, safe_name, fmt):
+    """Атомарное резервирование имени файла: два потока не получат один путь."""
+    with PATH_LOCK:
+        candidate = os.path.join(out_dir, f"{safe_name}.{fmt}")
+        i = 2
+        while candidate in RESERVED_PATHS or os.path.exists(candidate):
+            candidate = os.path.join(out_dir, f"{safe_name}_{i}.{fmt}")
+            i += 1
+        RESERVED_PATHS.add(candidate)
+        return candidate
+
+
+def quick_dns_check(url):
+    """Домен должен резолвиться. getaddrinfo, а не gethostbyname: иначе IPv6-only
+    хосты ошибочно считаются мёртвыми."""
+    try:
+        host = urlparse(url).hostname
+        if not host:
+            return False, "Не удалось разобрать URL"
+        socket.getaddrinfo(host, None)
+        return True, None
+    except Exception as e:
+        return False, f"DNS/сеть недоступны: {e}"
+
+
+def random_locale_tz():
+    return random.choice(LOCALE_TZ_PAIRS)
+
+
+def random_ua():
+    return random.choice(USER_AGENTS)
+
+
+def platform_for_ua(ua):
+    if "Macintosh" in ua:
+        return "MacIntel", "macOS"
+    if "X11; Linux" in ua:
+        return "Linux x86_64", "Linux"
+    return "Win32", "Windows"
+
+
+def langs_for(locale):
+    return [locale, "en"] if locale != "en-US" else ["en-US", "en"]
+
+
+def accept_language_for(locale):
+    return f"{locale},en;q=0.9"
+
+
+def build_headers(ua, locale="en-US"):
+    _, plat = platform_for_ua(ua)
+    version = "148" if "148." in ua else "147"
+    return {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": accept_language_for(locale),
+        "Sec-CH-UA": f'"Google Chrome";v="{version}", "Chromium";v="{version}", "Not_A Brand";v="8"',
+        "Sec-CH-UA-Mobile": "?0",
+        "Sec-CH-UA-Platform": f'"{plat}"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
+        "User-Agent": ua,
+    }
+
+
+def build_launch_args(locale):
+    return [
+        '--no-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
+        f'--lang={locale}',                      # согласовано с locale, а не захардкожено
+        '--hide-scrollbars',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--mute-audio',
+        '--force-color-profile=srgb',
+    ]
+
+
+def build_stealth_script(ua, locale):
+    plat, _ = platform_for_ua(ua)
+    hw, mem = random.choice(HARDWARE_PROFILES)
+    return (STEALTH_TEMPLATE
+            .replace("__LANGS__", json.dumps(langs_for(locale)))
+            .replace("__PLATFORM__", json.dumps(plat))
+            .replace("__HW__", str(hw))
+            .replace("__MEM__", str(mem)))
+
+
+def launch_chromium(p, args):
+    """Сначала bundled Chromium, затем системный Chrome, затем Edge.
+    Причина: установка браузера может не пройти (нет сети/прав), а Chrome уже есть."""
+    variants = [
+        dict(headless=True, args=args),
+        dict(headless=True, channel="chrome", args=args),
+        dict(headless=True, channel="msedge", args=args),
+    ]
+    last = None
+    for kwargs in variants:
+        try:
+            return p.chromium.launch(**kwargs)
+        except Exception as e:
+            last = e
+    raise last or RuntimeError("Chromium/Chrome/Edge недоступны")
+
+
+def looks_blocked(title, body_sample):
+    haystack = f"{title} {body_sample}".lower()
+    return any(marker in haystack for marker in BLOCKED_MARKERS)
+
+
+def autoscroll(page, steps=6, pause_ms=350):
+    """Доскролл для триггера lazy-load; возвращаемся наверх, чтобы PDF начинался с начала."""
+    try:
+        for _ in range(steps):
+            page.mouse.wheel(0, random.randint(500, 900))
+            page.wait_for_timeout(pause_ms)
+        page.wait_for_timeout(150)
+        page.evaluate("window.scrollTo(0, 0)")
+        page.wait_for_timeout(150)
+    except Exception:
+        pass
+
+
+def dismiss_overlays(page):
+    """Закрываем cookie-баннеры/модалки ДО извлечения текста, иначе они лезут в результат."""
+    try:
+        n = page.evaluate(DISMISS_JS)
+        if n:
+            page.wait_for_timeout(300)
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(150)
+    except Exception:
+        pass
+
+
+def absolutize(soup, base):
+    """Относительные href/src в изолированном фрагменте ведут в нищу — делаем абсолютными."""
+    if not base:
+        return soup
+    for el in soup.find_all(["a", "img", "source", "video", "audio", "iframe", "link"]):
+        for attr in ("href", "src", "poster"):
+            v = el.get(attr)
+            if v and not re.match(r'^\s*(?:[a-z][a-z0-9+.\-]*:|#|data:|mailto:|tel:)', v, re.I):
+                try:
+                    el[attr] = urljoin(base, v.strip())
+                except Exception:
+                    pass
+    return soup
+
+
+def extract_page_text(page):
+    """Текст содержательного контейнера, без навигации и футера."""
+    cleanup = """
+      () => {
+        const root = document.querySelector(__SEL__) || document.body || document.documentElement;
+        const junk = root.querySelectorAll(__JUNK__);
+        junk.forEach((node) => node.remove());
+        return root.innerText || '';
+      }
+    """.replace("__SEL__", json.dumps(CONTENT_SELECTOR)).replace("__JUNK__", json.dumps(JUNK_SELECTOR))
+
+    try:
+        text_content = page.evaluate(cleanup)
+    except Exception:
+        try:
+            text_content = page.locator('body').inner_text(timeout=20000)
+        except Exception:
+            try:
+                text_content = page.evaluate("() => document.documentElement.innerText")
+            except Exception:
+                text_content = ""
+
+    lines = [re.sub(r"[ \t]+", " ", line).strip() for line in (text_content or "").splitlines()]
+    text_content = re.sub(r"\n{3,}", "\n\n", "\n".join(line for line in lines if line))
+
+    try:
+        frames = page.frames
+    except Exception:
+        frames = []
+    if len(frames) > 1:
+        extra = []
+        for frame in frames[1:]:
+            try:
+                frame_text = frame.inner_text(timeout=8000)
+                if frame_text.strip():
+                    extra.append(f"\n[FRAME: {frame.url}]\n{frame_text}\n")
+            except Exception:
+                continue
+        if extra:
+            text_content += "\n--- СОДЕРЖИМОЕ ФРЕЙМОВ ---\n" + "\n".join(extra)
+    return text_content
+
+
+def extract_page_html(page):
+    """HTML только содержательного контейнера — для Markdown."""
+    js = """
+        () => {
+          const root = document.querySelector(__SEL__) || document.body || document.documentElement;
+          const copy = root.cloneNode(true);
+          copy.querySelectorAll(__JUNK__).forEach((node) => node.remove());
+          return copy.outerHTML;
+        }
+    """.replace("__SEL__", json.dumps(CONTENT_SELECTOR)).replace("__JUNK__", json.dumps(JUNK_SELECTOR))
+    try:
+        return page.evaluate(js)
+    except Exception:
+        return page.content()
+
+
+def html_to_markdown(html_content, page_url=""):
+    """HTML -> Markdown: markdownify, при сбое — лёгкий конвертер на BeautifulSoup."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html_content, "html.parser")
+    for tag in soup(["script", "style", "noscript", "template", "svg", "iframe",
+                     "nav", "header", "footer", "aside"]):
+        tag.decompose()
+    absolutize(soup, page_url)
+
+    try:
+        from markdownify import markdownify as md_convert
+        body = soup.body or soup
+        md = md_convert(str(body), heading_style="ATX", bullets="-")
+        md = re.sub(r'\n{3,}', '\n\n', md).strip()
+        if md:
+            return md
+    except Exception:
+        pass
+
+    lines = []
+    for el in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "a"]):
+        if el.name and re.match(r'h[1-6]', el.name):
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(f"{'#' * int(el.name[1])} {txt}")
+        elif el.name == "li":
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(f"- {txt}")
+        elif el.name == "p":
+            txt = el.get_text(strip=True)
+            if txt:
+                lines.append(txt)
+    return "\n\n".join(lines) if lines else soup.get_text("\n", strip=True)
+
+
+def fetch_html(url, headers):
+    """requests-фоллбэк. Charset берём из заголовка, иначе apparent_encoding:
+    иначе кириллица приходит как ISO-8859-1 и превращается в можибаку."""
+    import requests
+    resp = requests.get(url, headers=headers, timeout=25, allow_redirects=True)
+    ctype = resp.headers.get("content-type", "") or ""
+    m = re.search(r'charset=([\w\-]+)', ctype, re.I)
+    if m:
+        try:
+            resp.encoding = m.group(1)
+        except Exception:
+            resp.encoding = "utf-8"
+    else:
+        resp.encoding = (resp.apparent_encoding or "utf-8")
+    resp.raise_for_status()
+    return resp.text, resp.status_code
+
+
+def fetch_bytes(url, headers):
+    """Бинарный фоллбэк для прямых ссылок на PDF."""
+    import requests
+    resp = requests.get(url, headers=headers, timeout=40, allow_redirects=True)
+    resp.raise_for_status()
+    return resp.content
+
+
+# ==============================================================================
+# ОСНОВНАЯ ЛОГИКА СКРАПИНГА (без UI — переиспользуется потоками)
+# ==============================================================================
+def scrape_one(url, fmt, out_dir, settings, log_cb, should_stop=None):
+    """Скрапит один URL и сохраняет результат на диск.
+    Возвращает dict для манифеста."""
+    stop = should_stop or (lambda: False)
+    result = {
+        "url": url, "title": "", "status": "failed", "format": fmt,
+        "file": None, "size_bytes": 0, "word_count": None,
+        "blocked_suspected": False, "method": "playwright",
+        "attempts": 0, "error": None, "elapsed_sec": 0.0,
+    }
+    t0 = time.time()
+
+    ok_dns, dns_err = quick_dns_check(url)
+    if not ok_dns:
+        result["error"] = dns_err
+        result["elapsed_sec"] = round(time.time() - t0, 2)
+        log_cb(f"   ❌ {dns_err}")
+        return result
+
+    file_path = reserve_path(out_dir, sanitize(url), fmt)
+
+    aggressive = bool(settings.get("aggressive"))
+    max_attempts = max(1, settings["retries"] + 1)
+    goto_timeout = 30000 if aggressive else 45000
+    net_timeout = 6000 if aggressive else 12000
+    last_error = None
+
+    for attempt in range(1, max_attempts + 1):
+        if stop():
+            last_error = last_error or "остановлено пользователем"
+            break
+        result["attempts"] = attempt
+        ua = random_ua()
+        locale, tz = random_locale_tz()
+        viewport = random.choice(VIEWPORTS)
+        saved = False
+        browser = None
+
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                try:
+                    browser = launch_chromium(p, build_launch_args(locale))
+                    context = browser.new_context(
+                        viewport=viewport,
+                        user_agent=ua,
+                        extra_http_headers=build_headers(ua, locale),
+                        locale=locale,
+                        timezone_id=tz,
+                        device_scale_factor=1,
+                        has_touch=False,
+                        is_mobile=False,
+                        color_scheme="light",
+                        permissions=["notifications"],
+                    )
+                    context.add_init_script(build_stealth_script(ua, locale))
+                    page = context.new_page()
+
+                    response = page.goto(url, wait_until="domcontentloaded", timeout=goto_timeout)
+
+                    # Поэтапное ожидание: networkidle не является условием продолжения
+                    try:
+                        page.wait_for_load_state("networkidle", timeout=net_timeout)
+                    except Exception:
+                        pass
+                    try:
+                        page.wait_for_load_state("load", timeout=4000)
+                    except Exception:
+                        pass
+
+                    page.wait_for_timeout(random.randint(150, 350) if aggressive
+                                          else random.randint(400, 900))
+                    dismiss_overlays(page)
+                    autoscroll(page, steps=4 if aggressive else 6,
+                               pause_ms=200 if aggressive else 350)
+
+                    try:
+                        title = page.title()
+                    except Exception:
+                        title = ""
+                    result["title"] = title
+
+                    status_code = response.status if response else None
+                    body_sample = ""
+                    try:
+                        body_sample = page.locator('body').inner_text(timeout=5000)[:2000]
+                    except Exception:
+                        pass
+
+                    blocked = (status_code in (403, 429, 503)) or looks_blocked(title, body_sample)
+                    result["blocked_suspected"] = blocked
+                    if blocked:
+                        log_cb(f"   ⚠️ Похоже на блокировку (код {status_code}), "
+                               f"попытка {attempt}/{max_attempts}")
+
+                    # ---------- сохранение по формату ----------
+                    if fmt == "pdf":
+                        # слово count для PDF считаем отдельно (в PDF его не измерить)
+                        try:
+                            probe = page.evaluate(
+                                "() => (document.querySelector(%s) || document.body || {}).innerText || ''"
+                                % json.dumps(CONTENT_SELECTOR))
+                            result["word_count"] = len(str(probe).split()) or None
+                        except Exception:
+                            result["word_count"] = None
+
+                        pdf_ok = False
+                        try:
+                            try:
+                                page.emulate_media(media="screen")
+                            except Exception:
+                                pass
+                            page.pdf(
+                                path=file_path, format='A4', print_background=True,
+                                scale=1.0, timeout=60000,
+                                margin={'top': '0.5in', 'bottom': '0.5in',
+                                        'left': '0.5in', 'right': '0.5in'},
+                            )
+                            pdf_ok = True
+                        except Exception as ep:
+                            log_cb(f"   ⚠️ page.pdf не удался: {str(ep)[:110]}")
+
+                        if not pdf_ok:
+                            ct = ""
+                            try:
+                                ct = (response.headers.get("content-type") or "") if response else ""
+                            except Exception:
+                                pass
+                            if "pdf" in ct.lower():
+                                data = fetch_bytes(url, build_headers(ua, locale))
+                                with open(file_path, "wb") as f:
+                                    f.write(data)
+                                result["method"] = "binary-download"
+                                pdf_ok = True
+                            if not pdf_ok:
+                                raise RuntimeError("не удалось отрендерить PDF этой страницы")
+
+                    elif fmt == "html":
+                        content = page.content()
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            f.write(content)
+
+                    elif fmt == "txt":
+                        text_content = extract_page_text(page)
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            f.write(text_content)
+                        result["word_count"] = len(text_content.split())
+                        result["_text"] = text_content
+
+                    elif fmt == "md":
+                        content = extract_page_html(page)
+                        md_text = html_to_markdown(content, url)
+                        header = f"# {title or url}\n\nИсточник: {url}\n\n---\n\n"
+                        full_md = header + md_text
+                        with open(file_path, 'w', encoding='utf-8') as f:
+                            f.write(full_md)
+                        result["word_count"] = len(full_md.split())
+                        result["_text"] = full_md
+
+                    elif fmt == "docx":
+                        from docx import Document
+                        text_content = extract_page_text(page)
+                        doc = Document()
+                        doc.add_heading(safe_xml_text(title or url), 0)
+                        doc.add_paragraph(safe_xml_text(f"Источник: {url}"))
+                        doc.add_paragraph(safe_xml_text(
+                            f"Сохранено: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"))
+                        doc.add_heading('Содержимое:', level=1)
+                        for para in text_content.split('\n'):
+                            para = safe_xml_text(para).strip()
+                            if para:
+                                doc.add_paragraph(para)
+                        doc.save(file_path)
+                        result["word_count"] = len(text_content.split())
+                        result["_text"] = text_content
+
+                    saved = True
+
+                finally:
+                    # close() обязателен даже при исключении: иначе висят процессы браузера
+                    if browser is not None:
+                        try:
+                            browser.close()
+                        except Exception:
+                            pass
+
+            if saved:
+                size = os.path.getsize(file_path)
+                result["status"] = "ok"
+                result["file"] = os.path.basename(file_path)
+                result["size_bytes"] = size
+                if result["method"] == "playwright":
+                    result["method"] = "playwright"
+                log_cb(f"   ✅ {fmt.upper()}: {human_size(size)} -> {os.path.basename(file_path)}"
+                       + (" [блокировка?]" if result["blocked_suspected"] else ""))
+                last_error = None
+                break
+
+        except Exception as e:
+            last_error = str(e)
+            log_cb(f"   ⚠️ Попытка {attempt}/{max_attempts} не удалась: {last_error[:120]}")
+            if attempt < max_attempts and not stop():
+                time.sleep(random.uniform(1.2, 2.6) if aggressive else random.uniform(2.0, 4.0))
+
+    # ---------- запасной метод: requests + BeautifulSoup ----------
+    if last_error and result["status"] != "ok" and fmt in ("html", "txt", "md", "docx"):
+        if stop():
+            result["error"] = last_error
+        else:
+            try:
+                log_cb("   🔁 Пробую запасной метод (requests)...")
+                ua = random_ua()
+                locale, _tz = random_locale_tz()
+                raw_html, status_code = fetch_html(url, build_headers(ua, locale))
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(raw_html, "html.parser")
+                for tag in soup(["script", "style", "noscript", "template", "svg", "iframe",
+                                 "nav", "header", "footer", "aside"]):
+                    tag.decompose()
+                title = soup.title.get_text(strip=True) if soup.title else ""
+                result["title"] = title
+
+                sample = soup.get_text(" ", strip=True)[:2000]
+                blocked = (status_code in (403, 429, 503)) or looks_blocked(title, sample)
+                result["blocked_suspected"] = blocked
+                if blocked:
+                    raise RuntimeError(f"запасной метод получил страницу-заглушку (код {status_code})")
+
+                if fmt == "html":
+                    with open(
