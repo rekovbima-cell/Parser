@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-UNIVERSAL SCRAPER v7.1 — ИСПРАВЛЕННАЯ ВЕРСИЯ v7.0
+UNIVERSAL SCRAPER v7.2 - ИСПРАВЛЕННАЯ ВЕРСИЯ v7.0
 
 ИСПРАВЛЕНИЯ v7.1 (почему v7.0 "не выводил" JavaScript):
   1. JS-рендеринг: раньше страница читалась через 5 секунд после driver.get().
@@ -12,10 +12,17 @@ UNIVERSAL SCRAPER v7.1 — ИСПРАВЛЕННАЯ ВЕРСИЯ v7.0
      Firefox), плюс настраиваемый таймаут загрузки страницы.
   3. Fallback: если браузер недоступен (нет Selenium/Firefox Portable) или сайт
      заблокировал браузер, автоматический переход на HTTP-режим и обратно.
-  4. Gmail: в v7.0 логин/пароль были объявлены, но НЕ ИСПОЛЬЗОВАЛИСЬ — входа в
+  4. Gmail: в v7.0 логин/пароль были объявлены, но НЕ ИСПОЛЬЗОВАЛИСЬ - входа в
      Gmail не было вообще. Теперь есть периодический вход в Gmail через браузер
      (постоянный профиль хранит cookies, проверка раз в GMAIL_CHECK_INTERVAL_HOURS).
   5. Полный лог в LOGS/scraper_log.txt для диагностики.
+
+ИСПРАВЛЕНИЯ v7.2:
+  * В v7.1 файл был повреждён при загрузке в репозиторий: строки разорваны
+    посреди идентификаторов (GeckoDriverManager, save_result, smart_scrape) -
+    Python выдавал SyntaxError. Файл переписан целиком.
+  * Gmail: у неудачных попыток входа появился cooldown (GMAIL_RETRY_COOLDOWN_MIN),
+    чтобы видимое окно браузера не открывалось при каждом запуске подряд.
 """
 
 import sys
@@ -45,6 +52,7 @@ except Exception:
 GMAIL_EMAIL = "malkodiro@gmail.com"
 GMAIL_PASSWORD = "Linakada!11O"
 GMAIL_CHECK_INTERVAL_HOURS = 24   # периодическая проверка сессии Gmail (через браузер)
+GMAIL_RETRY_COOLDOWN_MIN = 360    # пауза между неудачными попытками входа Gmail
 
 FIREFOX_PATH = os.path.join(BASE_DIR, "BROWSER", "FirefoxPortable", "FirefoxPortable.exe")
 PROFILE_DIR = os.path.join(BASE_DIR, "BROWSER", "firefox_profile")
@@ -132,7 +140,7 @@ def create_driver(headless=True):
 
 def wait_for_js_content(driver, timeout=JS_STABLE_TIMEOUT, stable_sec=3):
     """
-    ГЛАВНОЕ ИСПРАВЛЕНИЕ 'JavaScript не выводит':
+    ГЛАВНОЕ ИСПРАВЛЕНИЕ "JavaScript не выводит":
     1. ждём document.readyState == 'complete';
     2. прокручиваем страницу (активирует ленивую загрузку);
     3. ждём, пока объём текста перестанет расти (JS отрисовался).
@@ -143,7 +151,7 @@ def wait_for_js_content(driver, timeout=JS_STABLE_TIMEOUT, stable_sec=3):
             lambda d: d.execute_script("return document.readyState") == "complete"
         )
     except Exception:
-        pass  # даже если readyState завис — пробуем снять контент
+        pass  # даже если readyState завис - пробуем снять контент
 
     last_len = -1
     stable = 0
@@ -176,7 +184,7 @@ def scrape_with_browser(url, headless=True):
 
     try:
         driver.get(url)
-        wait_for_js_content(driver)  # <-- ждём реальной отрисовки JS, а не sleep(5)
+        wait_for_js_content(driver)  # ждём реальной отрисовки JS, а не sleep(5)
 
         title = driver.title or ""
         html = driver.page_source
@@ -224,12 +232,12 @@ def smart_scrape(url):
     result = scrape_with_browser(url)
     if result["status"] == "ok":
         return result
-    log(f"[scrape] Браузер: {result['status']} ({result.get('error', '')}) — пробую HTTP")
+    log(f"[scrape] Браузер: {result['status']} ({result.get('error', '')}) - пробую HTTP")
     http_result = scrape_with_http(url)
     if http_result["status"] == "ok":
         return http_result
     if http_result["status"] == "blocked":
-        log("[scrape] HTTP заблокирован — повтор через браузер")
+        log("[scrape] HTTP заблокирован - повтор через браузер")
         retry = scrape_with_browser(url)
         if retry["status"] == "ok":
             return retry
@@ -238,29 +246,46 @@ def smart_scrape(url):
 # ============================ GMAIL: ПОСТОЯННАЯ СЕССИЯ ЧЕРЕЗ БРАУЗЕР ============================
 
 def gmail_session_fresh():
-    """Сессия Gmail свежая, если проверка была недавно (маркер в профиле)."""
+    """Сессия Gmail свежая, если успешная проверка была недавно (маркер в профиле)."""
     marker = os.path.join(PROFILE_DIR, ".gmail_last_check")
     try:
         return (time.time() - os.path.getmtime(marker)) < GMAIL_CHECK_INTERVAL_HOURS * 3600
     except Exception:
         return False
 
+def gmail_attempt_allowed():
+    """Не открывать окно входа чаще, чем раз в GMAIL_RETRY_COOLDOWN_MIN минут."""
+    marker = os.path.join(PROFILE_DIR, ".gmail_last_attempt")
+    try:
+        return (time.time() - os.path.getmtime(marker)) > GMAIL_RETRY_COOLDOWN_MIN * 60
+    except Exception:
+        return True
+
 def ensure_gmail_session():
     """
     ПЕРИОДИЧЕСКИЙ ВХОД В GMAIL ЧЕРЕЗ БРАУЗЕР.
-    В v7.0 почта была объявлена (GMAIL_EMAIL/GMAIL_PASSWORD), но кода входа
-    НЕ БЫЛО. Здесь: раз в GMAIL_CHECK_INTERVAL_HOURS открываем Gmail в
-    ОВИДИМОМ окне Firefox Portable. Автоматический вход выполняется, если
-    Google его не блокирует; иначе окно остаётся открытым 90 секунд для
-    ручного подтверждения. Cookies сохраняются в постоянном профиле, поэтому
+    Раз в GMAIL_CHECK_INTERVAL_HOURS открываем Gmail в ВИДИМОМ окне
+    Firefox Portable. Автоматический вход выполняется, если Google его не
+    блокирует; иначе окно остаётся открытым 90 секунд для ручного
+    подтверждения. Cookies сохраняются в постоянном профиле, поэтому
     скрейпинг продолжает работать от вошедшего аккаунта.
     """
     if gmail_session_fresh():
         return True
+    if not gmail_attempt_allowed():
+        log("[gmail] Последняя попытка входа была недавно - пропускаю")
+        return False
+
+    attempt_marker = os.path.join(PROFILE_DIR, ".gmail_last_attempt")
+    try:
+        with open(attempt_marker, "w") as f:
+            f.write(datetime.now().isoformat())
+    except Exception:
+        pass
 
     driver = create_driver(headless=False)  # Google блокирует автовход в headless
     if not driver:
-        log("[gmail] Браузер недоступен — проверка Gmail пропущена")
+        log("[gmail] Браузер недоступен - проверка Gmail пропущена")
         return False
 
     ok = False
@@ -269,10 +294,10 @@ def ensure_gmail_session():
         time.sleep(3)
 
         if "accounts.google.com" not in driver.current_url:
-            log("[gmail] Сессия жива (cookies из профиля) — вход не нужен")
+            log("[gmail] Сессия жива (cookies из профиля) - вход не нужен")
             ok = True
         else:
-            log("[gmail] Сессия истекла — выполняем вход...")
+            log("[gmail] Сессия истекла - выполняем вход...")
             try:
                 from selenium.webdriver.common.by import By
                 from selenium.webdriver.support.ui import WebDriverWait
@@ -294,7 +319,7 @@ def ensure_gmail_session():
                 time.sleep(8)
                 ok = "accounts.google.com" not in driver.current_url
             except Exception as e:
-                log(f"[gmail] Автовход не удался ({e}) — окно открыто для ручного входа, 90 сек...")
+                log(f"[gmail] Автовход не удался ({e}) - окно открыто для ручного входа, 90 сек...")
                 deadline = time.time() + 90
                 while time.time() < deadline:
                     time.sleep(5)
@@ -375,7 +400,7 @@ def save_result(result, fmt="md"):
 
 def main():
     from argparse import ArgumentParser
-    parser = ArgumentParser(description='UNIVERSAL SCRAPER v7.1')
+    parser = ArgumentParser(description='UNIVERSAL SCRAPER v7.2')
     parser.add_argument('--url', help='URL to scrape')
     parser.add_argument('--urls', nargs='+', help='Multiple URLs')
     parser.add_argument('--file', help='File with URLs')
