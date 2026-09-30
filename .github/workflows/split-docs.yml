@@ -23,4 +23,4 @@ jobs:
           git checkout -b split-docs
           git add SPLIT
           git commit -m "Split docs for reading"
-          git push origin split-docs
+          git push origin split-docs --force
