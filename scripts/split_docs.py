@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import json, os
+import hashlib, json, os
 base = 'ARCHIVE/MEGA_TANK_v3_0'
 out = 'SPLIT'
 os.makedirs(out + '/chat', exist_ok=True)
@@ -32,7 +32,7 @@ with open(out + '/chat/INDEX.txt', 'w', encoding='utf-8') as fh:
     fh.write(chr(10).join(index))
 print('CHAT MESSAGES: %d' % n)
 
-# --- docs: 12k parts (smaller, для чтения через выгрузку без обрезки) ---
+# --- docs: 1900-char parts (less than 2000 - safe for the reading tool), md5 in index ---
 for fn in sorted(os.listdir(base)):
     if fn.endswith('.json'):
         continue
@@ -42,11 +42,12 @@ for fn in sorted(os.listdir(base)):
     with open(src, encoding='utf-8', errors='replace') as f:
         txt = f.read()
     tag = fn.split(' ')[0][:6]
-    size = 12000
+    size = 1900
     parts = [txt[i:i+size] for i in range(0, len(txt), size)]
     for p, chunk in enumerate(parts):
         with open('%s/doc/%s.part%d' % (out, tag, p), 'w', encoding='utf-8') as fh:
             fh.write(chunk)
+    md5 = hashlib.md5(txt.encode('utf-8')).hexdigest()
     with open(out + '/doc/' + tag + '.INDEX.txt', 'w', encoding='utf-8') as fh:
-        fh.write('%s = %s | total_len=%d parts=%d' % (tag, fn, len(txt), len(parts)) + chr(10))
+        fh.write('%s = %s | total_len=%d parts=%d md5=%s' % (tag, fn, len(txt), len(parts), md5) + chr(10))
 print('DOCS SPLIT DONE')
