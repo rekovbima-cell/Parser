@@ -17,13 +17,13 @@ jobs:
       - name: py_compile all Python files
         run: |
           rm -f report.txt
-          while IFS= read -r f; do
+          git -c core.quotepath=false ls-files -z -- '*.py' | while IFS= read -r -d '' f; do
             if python3 -m py_compile "$f" 2>/tmp/err.txt; then
               echo "OK $f" >> report.txt
             else
               echo "FAIL $f :: $(head -3 /tmp/err.txt | tr '\n' ' ')" >> report.txt
             fi
-          done < <(git ls-files '*.py')
+          done
           cat report.txt
       - name: Publish report branch
         run: |
