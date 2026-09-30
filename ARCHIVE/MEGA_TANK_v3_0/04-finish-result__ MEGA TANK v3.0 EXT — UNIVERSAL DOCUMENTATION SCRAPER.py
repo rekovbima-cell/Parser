@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
--- coding: utf-8 --
+# -*- coding: utf-8 -*-
 """
 ================================================================================
  MEGA TANK v3.0 EXT — UNIVERSAL DOCUMENTATION SCRAPER
@@ -8,7 +8,7 @@
  БАЗА (v3.0):
    • Список URL → PDF / HTML / TXT / DOCX / Markdown
    • Объединение в один файл для ЛЮБОГО формата
-   • Папка MEGATANK: файлы + MEGAFULL.* + manifest.json
+   • Папка MEGA_TANK_*: файлы + MEGA_FULL.* + manifest.json
      + INDEX.md + RUN.log + storage_state.json
    • Автоустановка зависимостей и браузера при первом запуске
    • Параллельность 1–5 потоков, повторы с ротацией UA/fingerprint
@@ -20,9 +20,9 @@
       (Chrome/Edge/Brave/Opera/Chromium Portable, Firefox Portable, LibreWolf).
    2. Три режима подключения:
         bundled    — стандартный Chromium/Chrome от Playwright;
-        persistent — launchpersistentcontext(userdatadir) → живые cookies,
+        persistent — launch_persistent_context(user_data_dir) → живые cookies,
                      local storage, история, «прогретый» fingerprint;
-        cdp        — connectovercdp() к УЖЕ ЗАПУЩЕННОМУ браузеру пользователя
+        cdp        — connect_over_cdp() к УЖЕ ЗАПУЩЕННОМУ браузеру пользователя
                      (авторизация выполнена вручную, скрипт её не трогает).
    3. Гетерогенность движков: Blink (CDP) и Gecko (Juggler). Честная диагностика:
       Playwright управляет Firefox только через патченную сборку, поэтому внешний
@@ -42,7 +42,7 @@
    • UTF-8 в консоли Windows (иначе краш на эмодзи ДО открытия GUI)
    • «Агрессивный режим» больше НЕ делает паузы длиннее щадящего (была инверсия)
    • Атомарное резервирование имён файлов между потоками (PATH_LOCK)
-   • safexmltext() — python-docx падал на управляющих символах XML
+   • safe_xml_text() — python-docx падал на управляющих символах XML
    • locale / Accept-Language / navigator.languages / --lang согласованы
    • merge_pdf() не падает целиком из-за одного битого или зашифрованного PDF
    • requests-фоллбэк читает charset из Content-Type (кириллица без можибаки)
@@ -70,21 +70,21 @@ from urllib.parse import urlparse, urljoin
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-==============================================================================
-ГЛУШКА КОНСОЛИ (Windows cp866/cp1251 → UnicodeEncodeError на эмодзи)
-==============================================================================
-def fixconsole():
+# ==============================================================================
+# ГЛУШКА КОНСОЛИ (Windows cp866/cp1251 → UnicodeEncodeError на эмодзи)
+# ==============================================================================
+def _fix_console():
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.reconfigure(encoding="utf-8", errors="replace")
         except Exception:
             pass
 
-fixconsole()
+_fix_console()
 
-==============================================================================
-КОНСТАНТЫ
-==============================================================================
+# ==============================================================================
+# КОНСТАНТЫ
+# ==============================================================================
 APP_NAME = "MEGA TANK"
 APP_VERSION = "3.0 EXT"
 BUILD_DATE = "29.09.2026"
@@ -92,10 +92,10 @@ BUILD_DATE = "29.09.2026"
 if getattr(sys, "frozen", False):
     BASE_DIR = os.path.dirname(os.path.abspath(sys.executable))
 else:
-    BASE_DIR = os.path.dirname(os.path.abspath(file))
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-PROFILEROOT = os.path.join(BASEDIR, "MEGATANKprofiles")
-CREATENOWINDOW = subprocess.CREATENOWINDOW if os.name == "nt" else 0
+PROFILE_ROOT = os.path.join(BASE_DIR, "MEGA_TANK_profiles")
+CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
 SYSTEM_BROWSER = "System Default (Playwright bundled)"
 
@@ -125,12 +125,12 @@ BLOCKED_MARKERS = [
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10157) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
 ]
 
-LOCALETZPAIRS = [
+LOCALE_TZ_PAIRS = [
     ("en-US", "America/New_York"),
     ("en-US", "America/Los_Angeles"),
     ("en-US", "America/Chicago"),
@@ -148,7 +148,7 @@ HARDWARE_PROFILES = [(8, 8), (12, 8), (4, 4), (16, 8), (8, 4)]
 
 PATH_LOCK = threading.Lock()
 RESERVED_PATHS = set()
-Один user-data-dir / один живой браузер не выдерживают двух процессов сразу.
+# Один user-data-dir / один живой браузер не выдерживают двух процессов сразу.
 PROFILE_LOCK = threading.RLock()
 
 CONTENT_SELECTOR = ("article, main, [role='main'], .article, .post, "
@@ -159,23 +159,23 @@ JUNK_SELECTOR = ("script, style, noscript, template, svg, canvas, iframe, nav, h
                  "[role=\"banner\"], [role=\"contentinfo\"], .cookie, .cookies, .consent, "
                  ".popup, .modal, .advert, .ads, .ad, .social-share")
 
-Что НЕ копируем в изолированную копию профиля
-PROFILEIGNORE = shutil.ignorepatterns(
+# Что НЕ копируем в изолированную копию профиля
+PROFILE_IGNORE = shutil.ignore_patterns(
     "Cache", "Code Cache", "GPUCache", "DawnCache", "ShaderCache", "GrShaderCache",
     "Service Worker", "CacheStorage", "componentcrxcache", "extensionscrxcache",
     "Singleton", ".lock", "lockfile", "parent.lock", ".parentlock",
     "Crashpad", "Crash Reports", "blobstorage", "optimizationguide_*",
 )
 
-==============================================================================
-STEALTH (Blink) + PREFS (Gecko)
-==============================================================================
+# ==============================================================================
+# STEALTH (Blink) + PREFS (Gecko)
+# ==============================================================================
 STEALTH_TEMPLATE = r"""
 (() => {
-    const LANGS    = LANGS;
-    const PLATFORM = PLATFORM;
-    const HW       = HW;
-    const MEM      = MEM;
+    const LANGS    = __LANGS__;
+    const PLATFORM = __PLATFORM__;
+    const HW       = __HW__;
+    const MEM      = __MEM__;
 
     try { delete Object.getPrototypeOf(navigator).webdriver; } catch (e) {}
     try { Object.defineProperty(navigator, 'webdriver', { get: () => undefined }); } catch (e) {}
@@ -250,7 +250,7 @@ DISMISS_JS = r"""
 }
 """
 
-Минимальный «человеческий» набор prefs для Gecko
+# Минимальный «человеческий» набор prefs для Gecko
 GECKO_PREFS = {
     "dom.webdriver.enabled": False,
     "general.useragent.override": "",
@@ -261,9 +261,9 @@ GECKO_PREFS = {
     "browser.shell.checkDefaultBrowser": False,
 }
 
-==============================================================================
-МЕНЕДЖЕР ВНЕШНИХ БРАУЗЕРОВ
-==============================================================================
+# ==============================================================================
+# МЕНЕДЖЕР ВНЕШНИХ БРАУЗЕРОВ
+# ==============================================================================
 class ExternalBrowserManager:
     """Обнаружение, запуск и подключение внешних портативных/системных браузеров.
 
@@ -348,8 +348,8 @@ class ExternalBrowserManager:
         ]),
     ]
 
-    def init(self, log_cb=None):
-        self.logcb = logcb or (lambda m: None)
+    def __init__(self, log_cb=None):
+        self.log_cb = log_cb or (lambda m: None)
         self.discovered = []
         self._lock = threading.Lock()
         self.scan()
@@ -361,7 +361,7 @@ class ExternalBrowserManager:
     def scanportable(self):
         """Рекурсивный поиск портативных сборок рядом со скриптом и в PortableApps."""
         found = {}
-        searchdirs = [BASEDIR]
+        search_dirs = [BASE_DIR]
         parent = os.path.dirname(BASE_DIR)
         for cand in (os.path.join(parent, "PortableApps"), parent,
                      os.path.join(os.path.dirname(parent), "PortableApps")):
@@ -382,7 +382,7 @@ class ExternalBrowserManager:
                     dirs[:] = []
                     continue
                 dirs[:] = [d for d in dirs if d.lower() not in
-                           ("node_modules", ".git", "pycache", "windows", "system32")]
+                           ("node_modules", ".git", "__pycache__", "windows", "system32")]
                 for name, cfg in self.PORTABLE_PATTERNS.items():
                     if name in found:
                         continue
@@ -407,8 +407,8 @@ class ExternalBrowserManager:
                         "exe": exe_path,
                         "engine": cfg["engine"],
                         "channel": None,
-                        "profilearg": cfg["profilearg"],
-                        "profiledir": profiledir,
+                        "profile_arg": cfg["profile_arg"],
+                        "profile_dir": profile_dir,
                         "base_dir": root,
                         "kind": "portable",
                     }
@@ -423,7 +423,7 @@ class ExternalBrowserManager:
                     out.append({
                         "name": name, "exe": path, "engine": engine, "channel": channel,
                         "profile_arg": "--user-data-dir" if engine == "chromium" else "-profile",
-                        "profiledir": "", "basedir": os.path.dirname(path),
+                        "profile_dir": "", "base_dir": os.path.dirname(path),
                         "kind": "system",
                     })
                     break
@@ -442,7 +442,7 @@ class ExternalBrowserManager:
         return names
 
     # ------------------------------------------------------------------ lists
-    def getbrowserlist(self):
+    def get_browser_list(self):
         with self._lock:
             names = [b["name"] for b in self.discovered]
         return [SYSTEM_BROWSER] + names
@@ -454,7 +454,7 @@ class ExternalBrowserManager:
     # -------------------------------------------------------------------- cdp
     @staticmethod
     def probe_cdp(port, timeout=1.5):
-        """Живой CDP-эндпоинт на 127.0.0.1:. Возвращает ws-URL или None."""
+        """Живой CDP-эндпоинт на 127.0.0.1:<порт>. Возвращает ws-URL или None."""
         try:
             import requests
             r = requests.get(f"http://127.0.0.1:{int(port)}/json/version", timeout=timeout)
@@ -468,33 +468,33 @@ class ExternalBrowserManager:
         return None, None
 
     # ------------------------------------------------------------------ plan
-    def buildplan(self, browsername, profilepath="", useprofile=False,
-                   attachcdp=False, cdpport=9222, headless=True,
-                   copyprofile=False, logcb=None):
+    def build_plan(self, browser_name, profile_path="", use_profile=False,
+                   attach_cdp=False, cdp_port=9222, headless=True,
+                   copy_profile=False, log_cb=None):
         """Собирает план запуска. Ничего не запускает — только данные."""
-        cb = logcb or self.logcb
+        cb = log_cb or self.log_cb
         plan = {
             "mode": "bundled",          # bundled | persistent | cdp | executable
             "engine": "chromium",
             "channel": None,
             "executable_path": None,
             "args": [],
-            "userdatadir": None,
+            "user_data_dir": None,
             "cdp_url": None,
             "owns_browser": True,
             "owns_context": True,
             "label": SYSTEM_BROWSER,
-            "profileiscopy": False,
+            "profile_is_copy": False,
             "serial": False,            # сериализовать доступ (профиль/CDP)
             "warnings": [],
         }
 
         # --- 1) CDP к живому браузеру ---
         if attach_cdp:
-            ws, ver = self.probecdp(cdpport)
+            ws, ver = self.probe_cdp(cdp_port)
             if ws:
                 plan.update(mode="cdp", engine="chromium", cdp_url=ws,
-                            ownsbrowser=False, ownscontext=False, serial=True,
+                            owns_browser=False, owns_context=False, serial=True,
                             label=f"CDP 127.0.0.1:{cdp_port}")
                 cb(f"🔌 Найден запущенный браузер: {ver} → подключаюсь через CDP "
                    f"(ws на 127.0.0.1:{cdp_port})")
@@ -508,12 +508,12 @@ class ExternalBrowserManager:
             plan["warnings"].append(f"CDP на порту {cdp_port} не найден")
 
         # --- 2) bundled ---
-        if not browsername or browsername == SYSTEM_BROWSER:
+        if not browser_name or browser_name == SYSTEM_BROWSER:
             plan["label"] = SYSTEM_BROWSER
-            if profilepath and useprofile:
-                eff, iscopy = self.prepareprofile(profilepath, copyprofile, cb)
-                plan.update(mode="persistent", userdatadir=eff,
-                            profileiscopy=is_copy, serial=True,
+            if profile_path and use_profile:
+                eff, is_copy = self.prepare_profile(profile_path, copy_profile, cb)
+                plan.update(mode="persistent", user_data_dir=eff,
+                            profile_is_copy=is_copy, serial=True,
                             label=f"bundled + профиль {os.path.basename(eff)}")
             return plan
 
@@ -534,20 +534,20 @@ class ExternalBrowserManager:
                 "Playwright управляет Firefox через Juggler и требует патченной сборки; "
                 "внешний Firefox/LibreWolf обычно не запускается — будет фоллбэк")
             cb("ℹ️ Выбран Gecko-движок. Playwright работает только со своей сборкой "
-               "Firefox: внешний Firefox/LibreWolf будет尝试 запущен, при отказе — "
+               "Firefox: внешний Firefox/LibreWolf будет запущен, при отказе — "
                "автоматический фоллбэк на bundled Firefox/Chromium.")
 
         eff_profile = ""
         if profile_path:
-            effprofile = profilepath
+            eff_profile = profile_path
         elif cfg.get("profile_dir"):
-            effprofile = cfg["profiledir"]
+            eff_profile = cfg["profile_dir"]
 
-        if effprofile and useprofile:
-            eff, iscopy = self.prepareprofile(effprofile, copyprofile, cb)
-            plan["userdatadir"] = eff
+        if eff_profile and use_profile:
+            eff, is_copy = self.prepare_profile(eff_profile, copy_profile, cb)
+            plan["user_data_dir"] = eff
             plan["mode"] = "persistent"
-            plan["profileiscopy"] = is_copy
+            plan["profile_is_copy"] = is_copy
             plan["serial"] = True
             cb(f"👤 Профиль: {eff}" + ("  (изолированная копия)" if is_copy else ""))
         else:
@@ -565,15 +565,15 @@ class ExternalBrowserManager:
         return plan
 
     # --------------------------------------------------------------- profile
-    def prepareprofile(self, profilepath, copy_profile, cb):
-        """Возвращает (effectivedir, iscopy). Создаёт каталог или его копию."""
-        profilepath = os.path.abspath(os.path.expandvars(os.path.expanduser(profilepath or "")))
+    def prepare_profile(self, profile_path, copy_profile, cb):
+        """Возвращает (effectivedir, is_copy). Создаёт каталог или его копию."""
+        profile_path = os.path.abspath(os.path.expandvars(os.path.expanduser(profile_path or "")))
         if not profile_path:
             return "", False
 
         if not copy_profile:
             try:
-                os.makedirs(profilepath, existok=True)
+                os.makedirs(profile_path, exist_ok=True)
             except Exception as e:
                 cb(f"⚠️ не удалось использовать профиль {profile_path}: {e}")
             return profile_path, False
@@ -585,17 +585,17 @@ class ExternalBrowserManager:
             if os.path.isdir(profile_path):
                 cb(f"📑 Копирую профиль {profile_path} → {dest} (кэш исключён)...")
                 t0 = time.time()
-                shutil.copytree(profilepath, dest, ignore=PROFILEIGNORE,
-                                dirsexistok=True, symlinks=False)
+                shutil.copytree(profile_path, dest, ignore=PROFILE_IGNORE,
+                                dirs_exist_ok=True, symlinks=False)
                 cb(f"   ✅ копия готова за {time.time() - t0:.1f} с — оригинал не трогается")
             return dest, True
         except Exception as e:
             cb(f"⚠️ копирование профиля не удалось ({str(e)[:120]}) — работаю с оригиналом")
             return profile_path, False
 
-==============================================================================
-BROWSER SESSION — единая обёртка над launch / persistent / connectovercdp
-==============================================================================
+# ==============================================================================
+# BROWSER SESSION — единая обёртка над launch / persistent / connect_over_cdp
+# ==============================================================================
 class BrowserSession:
     """Владеет browser/context/page и знает, ЧТО именно разрешено закрывать.
 
@@ -603,12 +603,12 @@ class BrowserSession:
     (CDP) и его контекст не закрываются никогда — только наша вкладка.
     """
 
-    def init(self, browser=None, context=None, owns_browser=True,
+    def __init__(self, browser=None, context=None, owns_browser=True,
                  owns_context=True, engine="chromium", label=""):
         self.browser = browser
         self.context = context
-        self.ownsbrowser = ownsbrowser
-        self.ownscontext = ownscontext
+        self.owns_browser = owns_browser
+        self.owns_context = owns_context
         self.engine = engine
         self.label = label
         self.page = None
@@ -631,10 +631,10 @@ class BrowserSession:
             except Exception:
                 pass
 
-    def enter(self):
+    def __enter__(self):
         return self
 
-    def exit(self, exc_type, exc, tb):
+    def __exit__(self, exc_type, exc, tb):
         self.close()
         return False
 
@@ -645,17 +645,17 @@ def ctxoptions(ua, locale, tz, viewport, plan, keep_headers=True):
         "viewport": viewport,
         "locale": locale,
         "timezone_id": tz,
-        "devicescalefactor": 1,
+        "device_scale_factor": 1,
     }
     spoof = plan["mode"] not in ("persistent", "cdp")
     if spoof:
         opts["user_agent"] = ua
         if keep_headers:
-            opts["extrahttpheaders"] = build_headers(ua, locale)
+            opts["extra_http_headers"] = build_headers(ua, locale)
         opts["permissions"] = ["notifications"]
     return opts
 
-def opensession(p, plan, ua, locale, tz, viewport, stealthon, log_cb):
+def open_session(p, plan, ua, locale, tz, viewport, stealth_on, log_cb):
     """Реализует план запуска. Бросает исключение — вызывающий решает, что делать."""
     engine = plan.get("engine", "chromium")
     btype = p.chromium if engine == "chromium" else p.firefox
@@ -664,41 +664,41 @@ def opensession(p, plan, ua, locale, tz, viewport, stealthon, log_cb):
 
     # ---------- CDP: подключение к живой сессии ----------
     if plan["mode"] == "cdp":
-        browser = p.chromium.connectovercdp(plan["cdp_url"], timeout=20000)
+        browser = p.chromium.connect_over_cdp(plan["cdp_url"], timeout=20000)
         if browser.contexts:
             context = browser.contexts[0]
             owns_context = False
             log_cb("   🔌 Использую существующий контекст пользователя (cookies/сессия живые)")
         else:
-            context = browser.new_context(opts)
+            context = browser.new_context(**opts)
             owns_context = True
         return BrowserSession(browser, context, owns_browser=False,
-                              ownscontext=ownscontext, engine="chromium",
+                              owns_context=owns_context, engine="chromium",
                               label=plan["label"])
 
     # ---------- persistent context (профиль) ----------
-    if plan["mode"] == "persistent" and plan.get("userdatadir"):
+    if plan["mode"] == "persistent" and plan.get("user_data_dir"):
         kwargs = dict(opts)
         kwargs.pop("permissions", None)          # в Gecko набор прав отличается
         kwargs["headless"] = headless
         if engine == "chromium":
             if plan.get("executable_path"):
-                kwargs["executablepath"] = plan["executablepath"]
+                kwargs["executable_path"] = plan["executable_path"]
             elif plan.get("channel"):
                 kwargs["channel"] = plan["channel"]
             kwargs["args"] = list(plan.get("args", []))
         else:
             if plan.get("executable_path"):
-                kwargs["executablepath"] = plan["executablepath"]
+                kwargs["executable_path"] = plan["executable_path"]
             kwargs["args"] = list(plan.get("args", []))
-            kwargs["firefoxuserprefs"] = dict(GECKO_PREFS)
-        context = btype.launchpersistentcontext(plan["userdatadir"], kwargs)
-        session = BrowserSession(None, context, ownsbrowser=False, ownscontext=True,
+            kwargs["firefox_user_prefs"] = dict(GECKO_PREFS)
+        context = btype.launch_persistent_context(plan["user_data_dir"], **kwargs)
+        session = BrowserSession(None, context, owns_browser=False, owns_context=True,
                                  engine=engine, label=plan["label"])
         session.browser = getattr(context, "browser", None)
         if stealth_on and engine == "chromium":
             try:
-                context.addinitscript(buildstealthscript(ua, locale))
+                context.add_init_script(build_stealth_script(ua, locale))
             except Exception:
                 pass
         return session
@@ -706,34 +706,34 @@ def opensession(p, plan, ua, locale, tz, viewport, stealthon, log_cb):
     # ---------- обычный запуск (bundled / внешний exe) ----------
     launch_kwargs = {"headless": headless}
     if plan.get("executable_path"):
-        launchkwargs["executablepath"] = plan["executable_path"]
+        launch_kwargs["executable_path"] = plan["executable_path"]
     elif plan.get("channel"):
         launch_kwargs["channel"] = plan["channel"]
     if engine == "chromium":
-        launchkwargs["args"] = list(plan.get("args", [])) or buildlaunch_args(locale)
+        launch_kwargs["args"] = list(plan.get("args", [])) or build_launch_args(locale)
     else:
         launch_kwargs["args"] = list(plan.get("args", []))
-        launchkwargs["firefoxuserprefs"] = dict(GECKOPREFS)
+        launch_kwargs["firefox_user_prefs"] = dict(GECKO_PREFS)
 
-    browser = btype.launch(launch_kwargs)
-    context = safenewcontext(browser, opts, log_cb)
+    browser = btype.launch(**launch_kwargs)
+    context = safe_new_context(browser, opts, log_cb)
     if stealth_on and engine == "chromium":
         try:
-            context.addinitscript(buildstealthscript(ua, locale))
+            context.add_init_script(build_stealth_script(ua, locale))
         except Exception:
             pass
-    return BrowserSession(browser, context, ownsbrowser=True, ownscontext=True,
+    return BrowserSession(browser, context, owns_browser=True, owns_context=True,
                           engine=engine, label=plan["label"])
 
-def safenewcontext(browser, opts, log_cb):
+def safe_new_context(browser, opts, log_cb):
     """Часть опций контекста может не поддерживаться конкретным движком/сборкой —
     деградируем пошагово, а не роняем весь URL."""
-    keysorder = ["permissions", "devicescalefactor", "extrahttp_headers"]
+    keys_order = ["permissions", "device_scale_factor", "extra_http_headers"]
     attempt = dict(opts)
     last = None
-    for  in range(len(keysorder) + 1):
+    for _ in range(len(keys_order) + 1):
         try:
-            return browser.new_context(attempt)
+            return browser.new_context(**attempt)
         except Exception as e:
             last = e
             drop = next((k for k in keys_order if k in attempt), None)
@@ -743,11 +743,54 @@ def safenewcontext(browser, opts, log_cb):
             log_cb(f"   ℹ️ контекст без «{drop}»: {str(e)[:90]}")
     raise last or RuntimeError("не удалось создать контекст")
 
-==============================================================================
-АВТОУСТАНОВКА ЗАВИСИМОСТЕЙ
-==============================================================================
+
+def build_launch_args(locale):
+    """Аргументы запуска Chromium: маскировка автоматизации + язык интерфейса."""
+    return [
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-blink-features=AutomationControlled",
+        "--hide-scrollbars",
+        "--mute-audio",
+        f"--lang={locale}",
+    ]
+
+def launch_chromium_fallback(p, args):
+    """Headless-Chromium для рендера: сначала bundled Playwright, затем системные
+    Chrome/Chromium/Edge. Бросает исключение, если ничего не нашлось."""
+    try:
+        return p.chromium.launch(headless=True, args=args)
+    except Exception:
+        pass
+    candidates = []
+    if os.name == "nt":
+        for env_var in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"):
+            base = os.environ.get(env_var)
+            if base:
+                candidates += [
+                    os.path.join(base, r"Google\Chrome\Application\chrome.exe"),
+                    os.path.join(base, r"Chromium\Application\chrome.exe"),
+                    os.path.join(base, r"Microsoft\Edge\Application\msedge.exe"),
+                ]
+    else:
+        candidates += ["/usr/bin/google-chrome", "/usr/bin/chromium",
+                       "/usr/bin/chromium-browser", "/snap/bin/chromium",
+                       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
+    for exe in candidates:
+        if exe and os.path.isfile(exe):
+            try:
+                return p.chromium.launch(executable_path=exe, headless=True, args=args)
+            except Exception:
+                continue
+    raise RuntimeError("Chromium не найден: выполни 'playwright install chromium' "
+                       "или установи Google Chrome / Microsoft Edge")
+
+# ==============================================================================
+# АВТОУСТАНОВКА ЗАВИСИМОСТЕЙ
+# ==============================================================================
 class AutoInstaller:
-    def init(self):
+    def __init__(self):
         self.missing = []
         self.installed = []
 
@@ -765,8 +808,8 @@ class AutoInstaller:
         if quiet:
             return subprocess.check_call(cmd, stdout=subprocess.DEVNULL,
                                          stderr=subprocess.DEVNULL,
-                                         creationflags=CREATENOWINDOW)
-        return subprocess.checkcall(cmd, creationflags=CREATENO_WINDOW)
+                                         creationflags=CREATE_NO_WINDOW)
+        return subprocess.check_call(cmd, creationflags=CREATE_NO_WINDOW)
 
     def install(self, pkg):
         print(f"📦 Установка {pkg}...")
@@ -788,9 +831,9 @@ class AutoInstaller:
 
     def chromium_ready(self):
         try:
-            from playwright.syncapi import syncplaywright
+            from playwright.sync_api import sync_playwright
             with sync_playwright() as p:
-                b = launchchromiumfallback(p, buildlaunchargs("en-US"))
+                b = launch_chromium_fallback(p, build_launch_args("en-US"))
                 b.close()
             return True
         except Exception:
@@ -802,7 +845,7 @@ class AutoInstaller:
             try:
                 subprocess.check_call(
                     [sys.executable, "-m", "playwright", "install", what] + extra,
-                    creationflags=CREATENOWINDOW)
+                    creationflags=CREATE_NO_WINDOW)
                 print(f"   ✅ {what} установлен")
                 return True
             except Exception as e:
@@ -811,7 +854,7 @@ class AutoInstaller:
 
     def run(self):
         print("=" * 70)
-        print(f"🔍 {APPNAME} v{APPVERSION} — ПРОВЕРКА ЗАВИСИМОСТЕЙ")
+        print(f"🔍 {APP_NAME} v{APP_VERSION} — ПРОВЕРКА ЗАВИСИМОСТЕЙ")
         print("=" * 70)
         for pkg, imp in REQUIRED_PACKAGES:
             ok = self.check(pkg, imp)
@@ -845,58 +888,180 @@ class AutoInstaller:
         print("=" * 70)
         return len(self.missing) == 0
 
-def installplaywrightbrowser(what, log_cb):
+def install_playwright_browser(what, log_cb):
     """Установка браузера Playwright из GUI (в отдельном потоке)."""
     log_cb(f"🌐 playwright install {what} ...")
     try:
         subprocess.check_call([sys.executable, "-m", "playwright", "install", what],
-                              creationflags=CREATENOWINDOW)
+                              creationflags=CREATE_NO_WINDOW)
         log_cb(f"   ✅ {what} установлен")
         return True
     except Exception as e:
         log_cb(f"   ❌ не удалось установить {what}: {e}")
         return False
 
-==============================================================================
-ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-==============================================================================
+# ==============================================================================
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# ==============================================================================
 def sanitize(name):
     name = re.sub(r'^https?://', '', name)
     name = re.sub(r'[^\w\-.]', '', name)
     name = name.strip('_')
-    while "" in name:
-        name = name.replace("", "_")
+    while "__" in name:
+        name = name.replace("__", "_")
     return (name or "page")[:80]
 
 def slugify(text):
     text = re.sub(r'[^\w\-]+', '-', str(text).strip().lower())
     return re.sub(r'-+', '-', text).strip('-')[:60] or "source"
 
-def humansize(numbytes):
-    numbytes = float(numbytes or 0)
+def human_size(num_bytes):
+    num_bytes = float(num_bytes or 0)
     for unit in ("Б", "КБ", "МБ", "ГБ"):
-        if num_bytes  {
-  const root = document.querySelector(SEL) || document.body || document.documentElement;
-  root.querySelectorAll(JUNK).forEach((n) => n.remove());
+        if num_bytes < 1024:
+            return f"{int(num_bytes)} {unit}" if unit == "Б" else f"{num_bytes:.1f} {unit}"
+        num_bytes /= 1024
+    return f"{num_bytes:.1f} ТБ"
+
+def now_stamp():
+    return datetime.now().strftime("%Y-%m-%d_%H%M%S")
+
+def safe_xml_text(s):
+    return re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', str(s or ''))
+
+def reserve_path(out_dir, safe_name, fmt):
+    with PATH_LOCK:
+        candidate = os.path.join(out_dir, f"{safe_name}.{fmt}")
+        i = 2
+        while candidate in RESERVED_PATHS or os.path.exists(candidate):
+            candidate = os.path.join(out_dir, f"{safe_name}_{i}.{fmt}")
+            i += 1
+        RESERVED_PATHS.add(candidate)
+        return candidate
+
+def quick_dns_check(url):
+    try:
+        host = urlparse(url).hostname
+        if not host:
+            return False, "Не удалось разобрать URL"
+        socket.getaddrinfo(host, None)
+        return True, None
+    except Exception as e:
+        return False, f"DNS/сеть недоступны: {e}"
+
+def random_locale_tz():
+    return random.choice(LOCALE_TZ_PAIRS)
+
+def random_ua():
+    return random.choice(USER_AGENTS)
+
+def platform_for_ua(ua):
+    if "Macintosh" in ua:
+        return "MacIntel", "macOS"
+    if "X11; Linux" in ua:
+        return "Linux x86_64", "Linux"
+    return "Win32", "Windows"
+
+def langs_for(locale):
+    return [locale, "en"] if locale != "en-US" else ["en-US", "en"]
+
+def accept_language_for(locale):
+    return f"{locale},en;q=0.9"
+
+def build_headers(ua, locale="en-US"):
+    _, plat = platform_for_ua(ua)
+    version = "148" if "148." in ua else "147"
+    return {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": accept_language_for(locale),
+        "Sec-CH-UA": f'"Google Chrome";v="{version}", "Chromium";v="{version}", "Not_A Brand";v="8"',
+        "Sec-CH-UA-Mobile": "?0",
+        "Sec-CH-UA-Platform": f'"{plat}"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
+        "User-Agent": ua,
+    }
+
+def build_stealth_script(ua, locale):
+    plat, _ = platform_for_ua(ua)
+    hw, mem = random.choice(HARDWARE_PROFILES)
+    return (STEALTH_TEMPLATE
+            .replace("__LANGS__", json.dumps(langs_for(locale)))
+            .replace("__PLATFORM__", json.dumps(plat))
+            .replace("__HW__", str(hw))
+            .replace("__MEM__", str(mem)))
+
+def looks_blocked(title, body_sample):
+    haystack = f"{title} {body_sample}".lower()
+    return any(marker in haystack for marker in BLOCKED_MARKERS)
+
+def autoscroll(page, steps=6, pause_ms=350):
+    try:
+        for _ in range(steps):
+            page.mouse.wheel(0, random.randint(500, 900))
+            page.wait_for_timeout(pause_ms)
+        page.wait_for_timeout(150)
+        page.evaluate("window.scrollTo(0, 0)")
+        page.wait_for_timeout(150)
+    except Exception:
+        pass
+
+def dismiss_overlays(page):
+    try:
+        n = page.evaluate(DISMISS_JS)
+        if n:
+            page.wait_for_timeout(300)
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(150)
+    except Exception:
+        pass
+
+def absolutize(soup, base):
+    if not base:
+        return soup
+    for el in soup.find_all(["a", "img", "source", "video", "audio", "iframe", "link"]):
+        for attr in ("href", "src", "poster"):
+            v = el.get(attr)
+            if v and not re.match(r'^\s*(?:[a-z][a-z0-9+.\-]*:|#|data:|mailto:|tel:)', v, re.I):
+                try:
+                    el[attr] = urljoin(base, v.strip())
+                except Exception:
+                    pass
+    return soup
+
+def js(template):
+    """Подстановка селекторов в JS-шаблоны (плейсхолдеры __SEL__/__JUNK__)."""
+    return (template
+            .replace("__SEL__", json.dumps(CONTENT_SELECTOR))
+            .replace("__JUNK__", json.dumps(JUNK_SELECTOR)))
+
+JS_EXTRACT_TEXT = """
+() => {
+  const root = document.querySelector(__SEL__) || document.body || document.documentElement;
+  root.querySelectorAll(__JUNK__).forEach((n) => n.remove());
   return root.innerText || '';
 }
 """
 
-JSEXTRACTHTML = """
+JS_EXTRACT_HTML = """
 () => {
-  const root = document.querySelector(SEL) || document.body || document.documentElement;
+  const root = document.querySelector(__SEL__) || document.body || document.documentElement;
   const copy = root.cloneNode(true);
-  copy.querySelectorAll(JUNK).forEach((n) => n.remove());
+  copy.querySelectorAll(__JUNK__).forEach((n) => n.remove());
   return copy.outerHTML;
 }
 """
 
-def extractpagetext(page):
+def extract_page_text(page):
     try:
-        textcontent = page.evaluate(js(JSEXTRACTTEXT))
+        text_content = page.evaluate(js(JS_EXTRACT_TEXT))
     except Exception:
         try:
-            textcontent = page.locator('body').innertext(timeout=20000)
+            text_content = page.locator('body').inner_text(timeout=20000)
         except Exception:
             try:
                 text_content = page.evaluate("() => document.documentElement.innerText")
@@ -923,13 +1088,13 @@ def extractpagetext(page):
             text_content += "\n--- СОДЕРЖИМОЕ ФРЕЙМОВ ---\n" + "\n".join(extra)
     return text_content
 
-def extractpagehtml(page):
+def extract_page_html(page):
     try:
-        return page.evaluate(js(JSEXTRACT_HTML))
+        return page.evaluate(js(JS_EXTRACT_HTML))
     except Exception:
         return page.content()
 
-def htmltomarkdown(htmlcontent, pageurl=""):
+def html_to_markdown(html_content, page_url=""):
     from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(html_content, "html.parser")
@@ -941,7 +1106,7 @@ def htmltomarkdown(htmlcontent, pageurl=""):
     try:
         from markdownify import markdownify as md_convert
         body = soup.body or soup
-        md = mdconvert(str(body), headingstyle="ATX", bullets="-")
+        md = md_convert(str(body), heading_style="ATX", bullets="-")
         md = re.sub(r'\n{3,}', '\n\n', md).strip()
         if md:
             return md
@@ -978,38 +1143,48 @@ def fetch_html(url, headers):
             resp.encoding = "utf-8"
     else:
         resp.encoding = resp.apparent_encoding or "utf-8"
-    resp.raiseforstatus()
+    resp.raise_for_status()
     return resp.text, resp.status_code
 
 def fetch_bytes(url, headers):
     import requests
     resp = requests.get(url, headers=headers, timeout=40, allow_redirects=True)
-    resp.raiseforstatus()
+    resp.raise_for_status()
     return resp.content
 
-def pdffromhtml(htmlbody, title, url, outpath, log_cb):
+def pdf_from_html(html_body, title, url, out_path, log_cb):
     """PDF для Gecko: page.pdf() есть только в Chromium, поэтому рендерим
     сохранённый HTML отдельным headless-Chromium."""
-    from playwright.syncapi import syncplaywright
+    from playwright.sync_api import sync_playwright
     doc = f"""
-{title or url}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{title or url}</title>
+<style>
 body{{font-family:'Segoe UI',Arial,sans-serif;font-size:12pt;line-height:1.55;color:#111;margin:0}}
 h1{{font-size:19pt;color:#0b6b3a;margin:0 0 4px}} .meta{{color:#666;font-size:9pt;border-bottom:1px solid #ddd;
 padding-bottom:6px;margin-bottom:14px;word-break:break-all}} img{{max-width:100%}}
 pre{{background:#f5f5f5;border:1px solid #ddd;padding:8px;font-size:9pt;white-space:pre-wrap}}
 table{{border-collapse:collapse}} td,th{{border:1px solid #ccc;padding:4px;font-size:10pt}}
 a{{color:#0a6b3d;text-decoration:none}}
-{title or url}
-Источник: {url}Сохранено: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} · {APPNAME} v{APPVERSION}
-{html_body}"""
+</style>
+</head>
+<body>
+<h1>{title or url}</h1>
+<div class="meta">Источник: {url} · Сохранено: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} · {APP_NAME} v{APP_VERSION}</div>
+{html_body}
+</body>
+</html>"""
     with sync_playwright() as p:
-        browser = launchchromiumfallback(p, buildlaunchargs("en-US"))
+        browser = launch_chromium_fallback(p, build_launch_args("en-US"))
         try:
             page = browser.new_page()
-            page.setcontent(doc, waituntil="domcontentloaded")
-            page.waitfortimeout(400)
+            page.set_content(doc, wait_until="domcontentloaded")
+            page.wait_for_timeout(400)
             page.emulate_media(media="screen")
-            page.pdf(path=outpath, format='A4', printbackground=True, timeout=60000,
+            page.pdf(path=out_path, format='A4', print_background=True, timeout=60000,
                      margin={'top': '0.5in', 'bottom': '0.5in',
                              'left': '0.5in', 'right': '0.5in'})
         finally:
@@ -1019,29 +1194,29 @@ a{{color:#0a6b3d;text-decoration:none}}
                 pass
     log_cb("   🧾 PDF собран через headless-Chromium (Gecko не умеет page.pdf)")
 
-==============================================================================
-ОСНОВНАЯ ЛОГИКА СКРАПИНГА
-==============================================================================
-def scrapeone(url, fmt, outdir, settings, logcb, shouldstop=None, browser_manager=None):
+# ==============================================================================
+# ОСНОВНАЯ ЛОГИКА СКРАПИНГА
+# ==============================================================================
+def scrape_one(url, fmt, out_dir, settings, log_cb, should_stop=None, browser_manager=None):
     stop = should_stop or (lambda: False)
     result = {
         "url": url, "title": "", "status": "failed", "format": fmt,
-        "file": None, "sizebytes": 0, "wordcount": None,
+        "file": None, "size_bytes": 0, "word_count": None,
         "blocked_suspected": False, "method": "playwright",
         "attempts": 0, "error": None, "elapsed_sec": 0.0,
-        "browser": settings.get("externalbrowser", SYSTEMBROWSER),
+        "browser": settings.get("external_browser", SYSTEM_BROWSER),
         "engine": "chromium", "session_mode": "bundled",
     }
     t0 = time.time()
 
-    okdns, dnserr = quickdnscheck(url)
+    ok_dns, dns_err = quick_dns_check(url)
     if not ok_dns:
         result["error"] = dns_err
         result["elapsed_sec"] = round(time.time() - t0, 2)
-        logcb(f"   ❌ {dnserr}")
+        log_cb(f"   ❌ {dns_err}")
         return result
 
-    filepath = reservepath(out_dir, sanitize(url), fmt)
+    file_path = reserve_path(out_dir, sanitize(url), fmt)
 
     aggressive = bool(settings.get("aggressive"))
     max_attempts = max(1, settings["retries"] + 1)
@@ -1052,23 +1227,23 @@ def scrapeone(url, fmt, outdir, settings, logcb, shouldstop=None, browser_manage
     # ---- план запуска браузера (один на все попытки, но пересобирается при отказе)
     plan = None
     if browser_manager is not None:
-        plan = browsermanager.buildplan(
-            settings.get("externalbrowser", SYSTEMBROWSER),
-            profilepath=settings.get("customprofile_path") or "",
-            useprofile=bool(settings.get("useprofile")),
-            attachcdp=bool(settings.get("attachcdp")),
-            cdpport=int(settings.get("cdpport", 9222)),
+        plan = browser_manager.build_plan(
+            settings.get("external_browser", SYSTEM_BROWSER),
+            profile_path=settings.get("custom_profile_path") or "",
+            use_profile=bool(settings.get("use_profile")),
+            attach_cdp=bool(settings.get("attach_cdp")),
+            cdp_port=int(settings.get("cdp_port", 9222)),
             headless=bool(settings.get("headless", True)),
-            copyprofile=bool(settings.get("copyprofile")),
-            logcb=logcb,
+            copy_profile=bool(settings.get("copy_profile")),
+            log_cb=log_cb,
         )
         plan["headless"] = bool(settings.get("headless", True))
     if plan is None:
         plan = {"mode": "bundled", "engine": "chromium", "channel": None,
-                "executablepath": None, "args": buildlaunch_args("en-US"),
-                "userdatadir": None, "cdpurl": None, "ownsbrowser": True,
-                "ownscontext": True, "label": SYSTEMBROWSER, "headless": True,
-                "serial": False, "warnings": [], "profileiscopy": False}
+                "executable_path": None, "args": build_launch_args("en-US"),
+                "user_data_dir": None, "cdp_url": None, "owns_browser": True,
+                "owns_context": True, "label": SYSTEM_BROWSER, "headless": True,
+                "serial": False, "warnings": [], "profile_is_copy": False}
 
     result["session_mode"] = plan["mode"]
     result["engine"] = plan["engine"]
@@ -1081,23 +1256,23 @@ def scrapeone(url, fmt, outdir, settings, logcb, shouldstop=None, browser_manage
 
     for attempt in range(1, max_attempts + 1):
         if stop():
-            lasterror = lasterror or "остановлено пользователем"
+            last_error = last_error or "остановлено пользователем"
             break
         result["attempts"] = attempt
         ua = random_ua()
-        locale, tz = randomlocaletz()
+        locale, tz = random_locale_tz()
         viewport = random.choice(VIEWPORTS)
         saved = False
         session = None
 
         try:
-            from playwright.syncapi import syncplaywright
+            from playwright.sync_api import sync_playwright
             with sync_playwright() as p:
                 if serial:
                     PROFILE_LOCK.acquire()
                 try:
-                    session = openwith_fallback(p, plan, ua, locale, tz, viewport,
-                                                  stealthon, logcb)
+                    session = open_with_fallback(p, plan, ua, locale, tz, viewport,
+                                                  stealth_on, log_cb)
                 finally:
                     if serial:
                         PROFILE_LOCK.release()
@@ -1111,15 +1286,15 @@ def scrapeone(url, fmt, outdir, settings, logcb, shouldstop=None, browser_manage
                     response = page.goto(url, wait_until="domcontentloaded",
                                          timeout=goto_timeout)
                     try:
-                        page.waitforloadstate("networkidle", timeout=nettimeout)
+                        page.wait_for_load_state("networkidle", timeout=net_timeout)
                     except Exception:
                         pass
                     try:
-                        page.waitforload_state("load", timeout=4000)
+                        page.wait_for_load_state("load", timeout=4000)
                     except Exception:
                         pass
 
-                    page.waitfortimeout(random.randint(150, 350) if aggressive
+                    page.wait_for_timeout(random.randint(150, 350) if aggressive
                                           else random.randint(400, 900))
                     dismiss_overlays(page)
                     autoscroll(page, steps=4 if aggressive else 6,
@@ -1134,14 +1309,14 @@ def scrapeone(url, fmt, outdir, settings, logcb, shouldstop=None, browser_manage
                     status_code = response.status if response else None
                     body_sample = ""
                     try:
-                        bodysample = page.locator('body').innertext(timeout=5000)[:2000]
+                        body_sample = page.locator('body').inner_text(timeout=5000)[:2000]
                     except Exception:
                         pass
 
-                    blocked = (statuscode in (403, 429, 503)) or looksblocked(title, body_sample)
+                    blocked = (status_code in (403, 429, 503)) or looks_blocked(title, body_sample)
                     result["blocked_suspected"] = blocked
                     if blocked:
-                        logcb(f"   ⚠️ Похоже на блокировку (код {statuscode}), "
+                        log_cb(f"   ⚠️ Похоже на блокировку (код {status_code}), "
                                f"попытка {attempt}/{max_attempts}")
                     if plan["mode"] == "cdp" and not blocked:
                         log_cb("   🍪 Сессия пользователя использована (cookies/live-профиль)")
@@ -1163,7 +1338,7 @@ def scrapeone(url, fmt, outdir, settings, logcb, shouldstop=None, browser_manage
                                     page.emulate_media(media="screen")
                                 except Exception:
                                     pass
-                                page.pdf(path=filepath, format='A4', printbackground=True,
+                                page.pdf(path=file_path, format='A4', print_background=True,
                                          scale=1.0, timeout=60000,
                                          margin={'top': '0.5in', 'bottom': '0.5in',
                                                  'left': '0.5in', 'right': '0.5in'})
@@ -1179,13 +1354,13 @@ def scrapeone(url, fmt, outdir, settings, logcb, shouldstop=None, browser_manage
                                 pass
                             if "pdf" in ct.lower():
                                 with open(file_path, "wb") as f:
-                                    f.write(fetchbytes(url, buildheaders(ua, locale)))
+                                    f.write(fetch_bytes(url, build_headers(ua, locale)))
                                 result["method"] = "binary-download"
                                 pdf_ok = True
 
                         if not pdf_ok and session.engine != "chromium":
-                            body = cleanforprint(extractpagehtml(page), url)
-                            pdffromhtml(body, title, url, filepath, logcb)
+                            body = cleanforprint(extract_page_html(page), url)
+                            pdf_from_html(body, title, url, file_path, log_cb)
                             pdf_ok = True
                             result["method"] = "gecko->chromium-print"
 
@@ -1197,41 +1372,41 @@ def scrapeone(url, fmt, outdir, settings, logcb, shouldstop=None, browser_manage
                             f.write(page.content())
 
                     elif fmt == "txt":
-                        textcontent = extractpage_text(page)
+                        text_content = extract_page_text(page)
                         with open(file_path, 'w', encoding='utf-8') as f:
                             f.write(text_content)
-                        result["wordcount"] = len(textcontent.split())
-                        result["text"] = textcontent
+                        result["word_count"] = len(text_content.split())
+                        result["text"] = text_content
 
                     elif fmt == "md":
-                        mdtext = htmltomarkdown(extractpage_html(page), url)
-                        fullmd = f"# {title or url}\n\nИсточник: {url}\n\n---\n\n" + mdtext
+                        md_text = html_to_markdown(extract_page_html(page), url)
+                        full_md = f"# {title or url}\n\nИсточник: {url}\n\n---\n\n" + md_text
                         with open(file_path, 'w', encoding='utf-8') as f:
                             f.write(full_md)
-                        result["wordcount"] = len(fullmd.split())
-                        result["text"] = fullmd
+                        result["word_count"] = len(full_md.split())
+                        result["text"] = full_md
 
                     elif fmt == "docx":
                         from docx import Document
-                        textcontent = extractpage_text(page)
+                        text_content = extract_page_text(page)
                         doc = Document()
-                        doc.addheading(safexml_text(title or url), 0)
-                        doc.addparagraph(safexml_text(f"Источник: {url}"))
-                        doc.addparagraph(safexml_text(
+                        doc.add_heading(safe_xml_text(title or url), 0)
+                        doc.add_paragraph(safe_xml_text(f"Источник: {url}"))
+                        doc.add_paragraph(safe_xml_text(
                             f"Сохранено: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"))
-                        doc.addparagraph(safexml_text(
+                        doc.add_paragraph(safe_xml_text(
                             f"Браузер: {plan['label']} · режим: {plan['mode']}"))
                         doc.add_heading('Содержимое:', level=1)
                         for para in text_content.split('\n'):
-                            para = safexmltext(para).strip()
+                            para = safe_xml_text(para).strip()
                             if para:
                                 doc.add_paragraph(para)
                         doc.save(file_path)
-                        result["wordcount"] = len(textcontent.split())
-                        result["text"] = textcontent
+                        result["word_count"] = len(text_content.split())
+                        result["text"] = text_content
 
                     # ---------- экспорт сессии (cookies) ----------
-                    if settings.get("exportstorage") and session.ownscontext is False:
+                    if settings.get("export_storage") and session.owns_context is False:
                         pass      # чужой контекст не дампим — это данные пользователя
                     saved = True
 
@@ -1252,21 +1427,101 @@ def scrapeone(url, fmt, outdir, settings, logcb, shouldstop=None, browser_manage
                 result["size_bytes"] = size
                 if result["method"] == "playwright":
                     result["method"] = f"{plan['mode']}:{session.engine if session else 'chromium'}"
-                logcb(f"   ✅ {fmt.upper()}: {humansize(size)} -> {os.path.basename(file_path)}"
+                log_cb(f"   ✅ {fmt.upper()}: {human_size(size)} -> {os.path.basename(file_path)}"
                        + (" [блокировка?]" if result["blocked_suspected"] else ""))
                 last_error = None
                 break
 
         except Exception as e:
             last_error = str(e)
-            logcb(f"   ⚠️ Попытка {attempt}/{maxattempts} не удалась: {last_error[:140]}")
+            log_cb(f"   ⚠️ Попытка {attempt}/{max_attempts} не удалась: {last_error[:140]}")
             low = last_error.lower()
             if "singleton" in low or "process already running" in low or "in use" in low:
                 log_cb("   💡 Профиль уже открыт в браузере. Закройте его, "
                        "включите «Копия профиля» или перейдите на CDP-подключение.")
-                plan = dict(plan, mode="executable", userdatadir=None, serial=False)
+                plan = dict(plan, mode="executable", user_data_dir=None, serial=False)
                 log_cb("   🔁 Переключаюсь на запуск без профиля (изолированный контекст)")
-            if attempt  0:
+            if attempt < max_attempts:
+                time.sleep(random.uniform(2.0, 4.0))
+
+    if last_error and result["status"] != "ok" and fmt in ("html", "txt", "md", "docx"):
+        # --- Запасной метод: обычный requests + BeautifulSoup ---
+        try:
+            log_cb("   🔁 Пробую запасной метод (requests)...")
+            ua = random_ua()
+            raw_html, status_code = fetch_html(url, build_headers(ua, locale))
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(raw_html, "html.parser")
+            for tag in soup(["script", "style", "noscript", "template", "svg", "iframe",
+                             "nav", "header", "footer", "aside"]):
+                tag.decompose()
+            title = soup.title.get_text(strip=True) if soup.title else ""
+            result["title"] = title
+
+            if fmt == "html":
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(raw_html)
+            elif fmt == "txt":
+                text_content = soup.get_text("\n", strip=True)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(text_content)
+                result["word_count"] = len(text_content.split())
+                result["_text"] = text_content
+            elif fmt == "md":
+                md_text = html_to_markdown(raw_html, url)
+                full_md = f"# {title or url}\n\nИсточник: {url}\n\n---\n\n" + md_text
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(full_md)
+                result["word_count"] = len(full_md.split())
+                result["_text"] = full_md
+            elif fmt == "docx":
+                from docx import Document
+                text_content = soup.get_text("\n", strip=True)
+                doc = Document()
+                doc.add_heading(safe_xml_text(title or url), 0)
+                doc.add_paragraph(safe_xml_text(f"Источник: {url} (запасной метод)"))
+                for para in text_content.split('\n'):
+                    if para.strip():
+                        doc.add_paragraph(safe_xml_text(para.strip()))
+                doc.save(file_path)
+                result["word_count"] = len(text_content.split())
+                result["_text"] = text_content
+
+            size = os.path.getsize(file_path)
+            result["status"] = "ok"
+            result["file"] = os.path.basename(file_path)
+            result["size_bytes"] = size
+            result["method"] = "requests-fallback"
+            result["error"] = None
+            log_cb(f"   ✅ (запасной метод) {fmt.upper()}: {human_size(size)}")
+        except Exception as e2:
+            result["error"] = f"{last_error} | fallback: {e2}"
+            log_cb(f"   ❌ Запасной метод тоже не сработал: {str(e2)[:120]}")
+    elif last_error and result["status"] != "ok":
+        result["error"] = last_error
+
+    result["elapsed_sec"] = round(time.time() - t0, 2)
+    return result
+
+
+def open_with_fallback(p, plan, ua, locale, tz, viewport, stealth_on, log_cb):
+    """Открывает сессию по плану; при неудаче деградирует до bundled-режима.
+
+    Первый вариант — сам план, далее запасные (внешний профиль/exe → bundled
+    Chromium). Бросает исключение, если не запустился ни один вариант.
+    """
+    base_plan = dict(plan)
+    variants = [base_plan]
+    if base_plan.get("mode") in ("persistent", "executable", "cdp"):
+        v = dict(base_plan, mode="bundled", user_data_dir=None, executable_path=None,
+                 channel=None, cdp_url=None, serial=False)
+        v["label"] = f"{base_plan.get('label', 'браузер')} (bundled)"
+        variants.append(v)
+    last = None
+    for attempt, variant in enumerate(variants):
+        try:
+            session = open_session(p, variant, ua, locale, tz, viewport, stealth_on, log_cb)
+            if attempt > 0:
                 log_cb(f"   🔁 фоллбэк браузера: {variant['label']}")
             return session
         except Exception as e:
@@ -1279,7 +1534,7 @@ def scrapeone(url, fmt, outdir, settings, logcb, shouldstop=None, browser_manage
                        f"{variant.get('engine', 'chromium')}")
     raise last or RuntimeError("ни один браузер не запустился")
 
-def cleanforprint(htmlfragment, baseurl):
+def cleanforprint(html_fragment, base_url):
     """Лёгкая чистка HTML перед печатью в PDF (убираем скрипты и мусор)."""
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(html_fragment, "html.parser")
@@ -1288,23 +1543,23 @@ def cleanforprint(htmlfragment, baseurl):
     absolutize(soup, base_url)
     return str(soup)
 
-def dumpstoragestate(sessionorcontext, outdir, logcb):
+def dump_storage_state(session_or_context, out_dir, log_cb):
     """Сохраняет cookies/localStorage нашего контекста в storage_state.json.
     Работает только если контекст создан нами (чужой не дампим)."""
     try:
-        ctx = getattr(sessionorcontext, "context", sessionorcontext)
-        path = os.path.join(outdir, "storagestate.json")
+        ctx = getattr(session_or_context, "context", session_or_context)
+        path = os.path.join(out_dir, "storage_state.json")
         ctx.storage_state(path=path)
-        logcb(f"🍪 storagestate.json сохранён ({human_size(os.path.getsize(path))})")
+        log_cb(f"🍪 storage_state.json сохранён ({human_size(os.path.getsize(path))})")
         return path
     except Exception as e:
         log_cb(f"⚠️ не удалось экспортировать сессию: {str(e)[:120]}")
         return None
 
-==============================================================================
-ОБЪЕДИНЕНИЕ ФАЙЛОВ
-==============================================================================
-def mergepdf(okresults, outdir, outpath, log_cb):
+# ==============================================================================
+# ОБЪЕДИНЕНИЕ ФАЙЛОВ
+# ==============================================================================
+def merge_pdf(ok_results, out_dir, out_path, log_cb):
     from pypdf import PdfReader, PdfWriter
     writer = PdfWriter()
     skipped = 0
@@ -1327,15 +1582,15 @@ def mergepdf(okresults, outdir, outpath, log_cb):
             log_cb(f"   ⚠️ пропущен повреждённый PDF: {r['file']} — {str(e)[:80]}")
     if len(writer.pages) == 0:
         raise RuntimeError("ни одного читаемого PDF для объединения")
-    writer.addmetadata({"/Title": f"{APPNAME} Merged Export",
-                         "/Producer": f"{APPNAME} v{APPVERSION}"})
+    writer.addmetadata({"/Title": f"{APP_NAME} Merged Export",
+                         "/Producer": f"{APP_NAME} v{APP_VERSION}"})
     with open(out_path, "wb") as f:
         writer.write(f)
     writer.close()
     if skipped:
         log_cb(f"   ℹ️ в сводку не попали {skipped} файл(ов)")
 
-def mergetextlike(okresults, outpath, fmt):
+def merge_text_like(ok_results, out_path, fmt):
     sep = "\n\n" + ("=" * 70) + "\n\n"
     chunks = []
     for r in ok_results:
@@ -1344,8 +1599,8 @@ def mergetextlike(okresults, outpath, fmt):
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(sep.join(chunks))
 
-def mergemarkdown(okresults, out_path):
-    toc = ["# Сводный документ\n", f"Сгенерировано {APPNAME} v{APPVERSION}\n",
+def merge_markdown(ok_results, out_path):
+    toc = ["# Сводный документ\n", f"Сгенерировано {APP_NAME} v{APP_VERSION}\n",
            "\n## Содержание\n"]
     body_parts = []
     for r in ok_results:
@@ -1358,12 +1613,12 @@ def mergemarkdown(okresults, out_path):
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(toc) + "\n" + "".join(body_parts))
 
-def mergehtml(okresults, outdir, outpath):
+def merge_html(ok_results, out_dir, out_path):
     from bs4 import BeautifulSoup
     nav_items, sections = [], []
     for r in ok_results:
         anchor = slugify(r["title"] or r["url"])
-        nav_items.append(f'{r["title"] or r["url"]}')
+        nav_items.append(f'<li><a href="#{anchor}">{r["title"] or r["url"]}</a></li>')
         fp = os.path.join(out_dir, r["file"])
         try:
             with open(fp, "r", encoding="utf-8", errors="ignore") as f:
@@ -1374,15 +1629,15 @@ def mergehtml(okresults, outdir, outpath):
             absolutize(soup, r["url"])
             inner = str(soup.body) if soup.body else str(soup)
         except Exception:
-            inner = "(не удалось прочитать)"
+            inner = "<p>(не удалось прочитать)</p>"
         sections.append(
-            f'{r["title"] or r["url"]}'
-            f'Источник: {r["url"]}{inner}'
+            f'<section id="{anchor}"><h1>{r["title"] or r["url"]}</h1>'
+            f'<p class="src">Источник: <a href="{r["url"]}">{r["url"]}</a></p>{inner}</section><hr/>'
         )
-    html_doc = f"""
-
-{APP_NAME} — Сводный экспорт
-
+    html_doc = f"""<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>{APP_NAME} — Сводный экспорт</title>
+<style>
 body{{font-family:Segoe UI,Arial,sans-serif;background:#0d0d12;color:#e4e4e4;max-width:980px;margin:0 auto;padding:30px;line-height:1.6;}}
 nav{{background:#1a1a2e;padding:15px 20px;border-radius:8px;margin-bottom:30px;}}
 nav a{{color:#00ff88;text-decoration:none;}}
@@ -1395,56 +1650,56 @@ a{{color:#5aa9ff;}}
 img{{max-width:100%;height:auto;}}
 pre{{background:#111;padding:12px;border-radius:8px;overflow:auto;}}
 table{{border-collapse:collapse;}} td,th{{border:1px solid #333;padding:6px;}}
-
-📚 {APPNAME} — Сводный экспорт ({len(okresults)} источников)
-{''.join(nav_items)}
+</style></head><body>
+<h1>📚 {APP_NAME} — Сводный экспорт ({len(ok_results)} источников)</h1>
+<nav><ul>{''.join(nav_items)}</ul></nav>
 {''.join(sections)}
-"""
+</body></html>"""
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html_doc)
 
-def mergedocx(okresults, out_path):
+def merge_docx(ok_results, out_path):
     from docx import Document
     doc = Document()
-    doc.addheading(safexmltext(f'{APPNAME} — Сводный экспорт'), 0)
-    doc.addparagraph(safexml_text(
+    doc.add_heading(safe_xml_text(f'{APP_NAME} — Сводный экспорт'), 0)
+    doc.add_paragraph(safe_xml_text(
         f"Источников: {len(ok_results)} | Сгенерировано: "
         f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"))
     for i, r in enumerate(ok_results):
         if i > 0:
-            doc.addpagebreak()
-        doc.addheading(safexml_text(r["title"] or r["url"]), level=1)
-        doc.addparagraph(safexml_text(f"Источник: {r['url']}"))
+            doc.add_page_break()
+        doc.add_heading(safe_xml_text(r["title"] or r["url"]), level=1)
+        doc.add_paragraph(safe_xml_text(f"Источник: {r['url']}"))
         for para in r.get("_text", "").split('\n'):
-            para = safexmltext(para).strip()
+            para = safe_xml_text(para).strip()
             if para:
                 doc.add_paragraph(para)
     doc.save(out_path)
 
-def writemanifestandindex(manifest, outdir, mergedfilename=None, browserinfo=None):
+def write_manifest_and_index(manifest, out_dir, merged_filename=None, browser_info=None):
     clean = [{k: v for k, v in r.items() if not k.startswith("_")} for r in manifest]
     ok_n = sum(1 for r in clean if r["status"] == "ok")
     totals = {
         "sources": len(clean),
         "ok": ok_n,
         "failed": len(clean) - ok_n,
-        "blockedsuspected": sum(1 for r in clean if r.get("blockedsuspected")),
+        "blocked_suspected": sum(1 for r in clean if r.get("blocked_suspected")),
         "bytes": sum(int(r.get("size_bytes") or 0) for r in clean),
         "words": sum(int(r.get("word_count") or 0) for r in clean),
     }
 
     with open(os.path.join(out_dir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump({
-            "app": APPNAME, "version": APPVERSION, "build": BUILD_DATE,
+            "app": APP_NAME, "version": APP_VERSION, "build": BUILD_DATE,
             "generated": datetime.now().isoformat(timespec="seconds"),
-            "mergedfile": mergedfilename,
+            "merged_file": merged_filename,
             "browser": browser_info or {},
             "totals": totals,
             "sources": clean,
         }, f, ensure_ascii=False, indent=2)
 
     lines = [
-        f"# {APPNAME} v{APPVERSION} — отчёт о сборе\n",
+        f"# {APP_NAME} v{APP_VERSION} — отчёт о сборе\n",
         f"Сгенерировано: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  ",
         f"Всего источников: {len(clean)} · успешно: {ok_n} · "
         f"объём: {human_size(totals['bytes'])} · слов: {totals['words']}\n",
@@ -1462,9 +1717,9 @@ def writemanifestandindex(manifest, outdir, mergedfilename=None, browserinfo=Non
         blocked = " ⚠️блок" if r.get("blocked_suspected") else ""
         title = (r["title"] or "—").replace("|", "/")[:60]
         file_link = f"[{r['file']}](./{r['file']})" if r["file"] else "—"
-        size = humansize(r["sizebytes"]) if r["size_bytes"] else "—"
-        words = r["wordcount"] if r["wordcount"] else "—"
-        lines.append(f"| {i} | {title} | {r['url']} | {statusicon}{blocked} | {filelink} "
+        size = human_size(r["size_bytes"]) if r["size_bytes"] else "—"
+        words = r["word_count"] if r["word_count"] else "—"
+        lines.append(f"| {i} | {title} | {r['url']} | {status_icon}{blocked} | {file_link} "
                      f"| {size} | {words} | {r['method']} |")
         if r["status"] != "ok" and r.get("error"):
             lines.append(f"|   | ошибка: {str(r['error'])[:150]} | | | | | |")
@@ -1475,26 +1730,26 @@ def writemanifestandindex(manifest, outdir, mergedfilename=None, browserinfo=Non
         f.write("\n".join(lines))
     return totals
 
-==============================================================================
-GUI
-==============================================================================
+# ==============================================================================
+# GUI
+# ==============================================================================
 class App:
-    def init(self, root):
+    def __init__(self, root):
         self.root = root
         self.ui_q = queue.Queue()
         self.stop_event = threading.Event()
         self.lock = threading.Lock()
         self.is_running = False
-        self.lastoutputdir = None
+        self.last_output_dir = None
         self.log_buffer = []
-        self.browsermanager = ExternalBrowserManager(logcb=self.log)
+        self.browser_manager = ExternalBrowserManager(log_cb=self.log)
 
-        root.title(f"🚀 {APPNAME} v{APPVERSION}")
+        root.title(f"🚀 {APP_NAME} v{APP_VERSION}")
         root.configure(bg="#12121f")
         root.geometry("880x1000")
         root.minsize(820, 760)
         root.resizable(True, True)
-        root.protocol("WMDELETEWINDOW", self.on_close)
+        root.protocol("WM_DELETE_WINDOW", self.on_close)
 
         style = ttk.Style(root)
         try:
@@ -1510,7 +1765,7 @@ class App:
         # --- Заголовок ---
         header = tk.Frame(root, bg="#1a1a2e")
         header.pack(fill="x")
-        tk.Label(header, text=f"🚀 {APPNAME} v{APPVERSION}", font=("Segoe UI", 16, "bold"),
+        tk.Label(header, text=f"🚀 {APP_NAME} v{APP_VERSION}", font=("Segoe UI", 16, "bold"),
                  bg="#1a1a2e", fg="#00ff88", pady=8).pack()
         tk.Label(header, text="Внешние браузеры • Профили и cookies • CDP • "
                               "Любой формат • Параллельно",
@@ -1531,7 +1786,7 @@ class App:
         tk.Label(frame, text="Формат:", bg="#2d2d44", fg="white").grid(
             row=0, column=0, sticky="w", padx=5, pady=3)
         self.fmt_label = tk.StringVar(value="Markdown")
-        ttk.Combobox(frame, textvariable=self.fmtlabel, values=list(FORMATMAP.keys()),
+        ttk.Combobox(frame, textvariable=self.fmt_label, values=list(FORMAT_MAP.keys()),
                      state="readonly", width=12).grid(row=0, column=1, sticky="w", padx=5, pady=3)
 
         self.merge = tk.BooleanVar(value=True)
@@ -1575,21 +1830,21 @@ class App:
 
         tk.Label(bframe, text="Браузер:", bg="#252540", fg="white").grid(
             row=0, column=0, sticky="w", padx=5, pady=4)
-        browserlist = self.browsermanager.getbrowserlist()
-        self.selectedbrowser = tk.StringVar(value=browserlist[0])
-        self.browsercombo = ttk.Combobox(bframe, textvariable=self.selectedbrowser,
+        browser_list = self.browser_manager.get_browser_list()
+        self.selected_browser = tk.StringVar(value=browser_list[0])
+        self.browser_combo = ttk.Combobox(bframe, textvariable=self.selected_browser,
                                           values=browser_list, state="readonly", width=34)
         self.browser_combo.grid(row=0, column=1, columnspan=2, sticky="w", padx=5, pady=4)
-        self.browsercombo.bind(">", self.onbrowserpick)
+        self.browser_combo.bind("<<ComboboxSelected>>", self.on_browser_pick)
 
-        tk.Button(bframe, text="🔄 Обновить список", command=self.refreshbrowserlist,
+        tk.Button(bframe, text="🔄 Обновить список", command=self.refresh_browser_list,
                   bg="#1e1e1e", fg="#00ff88", relief="flat", font=("Segoe UI", 9),
                   cursor="hand2").grid(row=0, column=3, sticky="w", padx=5, pady=4)
 
         tk.Label(bframe, text="Профиль (user-data-dir):", bg="#252540", fg="white").grid(
             row=1, column=0, sticky="w", padx=5, pady=4)
-        self.profilepathvar = tk.StringVar()
-        tk.Entry(bframe, textvariable=self.profilepathvar, bg="#1e1e1e", fg="#00ff88",
+        self.profile_path_var = tk.StringVar()
+        tk.Entry(bframe, textvariable=self.profile_path_var, bg="#1e1e1e", fg="#00ff88",
                  insertbackground="#00ff88", relief="flat",
                  font=("Consolas", 9)).grid(row=1, column=1, columnspan=2,
                                             sticky="we", padx=5, pady=4)
@@ -1622,7 +1877,7 @@ class App:
         tk.Label(bframe, text="CDP-порт:", bg="#252540", fg="white").grid(
             row=4, column=3, sticky="e", padx=(5, 0), pady=2)
         self.cdp_port = tk.IntVar(value=9222)
-        tk.Spinbox(bframe, from=1024, to=65535, textvariable=self.cdpport, width=6,
+        tk.Spinbox(bframe, from=1024, to=65535, textvariable=self.cdp_port, width=6,
                    bg="#1e1e1e", fg="#00ff88", insertbackground="#00ff88",
                    buttonbackground="#1e1e1e", relief="flat").grid(
             row=5, column=3, sticky="e", padx=5, pady=2)
@@ -1641,10 +1896,10 @@ class App:
 
         brow_btns = tk.Frame(bframe, bg="#252540")
         brow_btns.grid(row=7, column=0, columnspan=4, sticky="w", padx=5, pady=(8, 2))
-        tk.Button(browbtns, text="🔍 Проверить CDP-порт", command=self.testcdp,
+        tk.Button(brow_btns, text="🔍 Проверить CDP-порт", command=self.test_cdp,
                   bg="#1e1e1e", fg="#5aa9ff", relief="flat", font=("Segoe UI", 9),
                   cursor="hand2").pack(side="left", padx=(0, 6))
-        tk.Button(browbtns, text="🧪 Тест браузера", command=self.testbrowser,
+        tk.Button(brow_btns, text="🧪 Тест браузера", command=self.test_browser,
                   bg="#1e1e1e", fg="#00ff88", relief="flat", font=("Segoe UI", 9),
                   cursor="hand2").pack(side="left", padx=(0, 6))
         tk.Button(brow_btns, text="⬇️ Установить Firefox (Playwright)",
@@ -1674,7 +1929,7 @@ class App:
                              bg="#00aa44", fg="white", font=("Segoe UI", 12, "bold"),
                              relief="flat", cursor="hand2")
         self.btn.pack(side="left", fill="x", expand=True, padx=(0, 5))
-        self.stopbtn = tk.Button(btnrow, text="⛔ СТОП", command=self.stop, state="disabled",
+        self.stop_btn = tk.Button(btn_row, text="⛔ СТОП", command=self.stop, state="disabled",
                                   bg="#aa2222", fg="white", font=("Segoe UI", 12, "bold"),
                                   relief="flat", cursor="hand2")
         self.stop_btn.pack(side="left", fill="x", expand=True, padx=(5, 0))
@@ -1689,26 +1944,26 @@ class App:
         log_head.pack(fill="x", padx=20, pady=(6, 0))
         tk.Label(log_head, text="📋 Журнал", font=("Segoe UI", 9, "bold"),
                  bg="#12121f", fg="#00ff88").pack(side="left")
-        tk.Button(loghead, text="скопировать", command=self.copylog, bg="#2d2d44",
+        tk.Button(log_head, text="скопировать", command=self.copy_log, bg="#2d2d44",
                   fg="#cccccc", relief="flat", font=("Segoe UI", 8),
                   cursor="hand2").pack(side="right", padx=(6, 0))
-        tk.Button(loghead, text="очистить", command=self.clearlog, bg="#2d2d44",
+        tk.Button(log_head, text="очистить", command=self.clear_log, bg="#2d2d44",
                   fg="#cccccc", relief="flat", font=("Segoe UI", 8),
                   cursor="hand2").pack(side="right")
 
         log_frame = tk.Frame(root, bg="#0d0d0d", highlightbackground="#1e1e1e",
                              highlightthickness=1)
         log_frame.pack(fill="both", expand=True, padx=20, pady=(4, 5))
-        self.logtext = tk.Text(logframe, height=12, state="disabled", bg="#0d0d0d",
+        self.log_text = tk.Text(log_frame, height=12, state="disabled", bg="#0d0d0d",
                                 fg="#00ff88", font=("Consolas", 9), relief="flat",
                                 padx=6, pady=4)
-        sb = ttk.Scrollbar(logframe, orient="vertical", command=self.logtext.yview)
+        sb = ttk.Scrollbar(log_frame, orient="vertical", command=self.log_text.yview)
         self.log_text.configure(yscrollcommand=sb.set)
         self.log_text.pack(side="left", fill="both", expand=True)
         sb.pack(side="right", fill="y")
         for tag, color in (("ok", "#00ff88"), ("warn", "#ffb020"), ("err", "#ff5470"),
                            ("info", "#9fd7ff"), ("mut", "#7a7a95")):
-            self.logtext.tagconfigure(tag, foreground=color)
+            self.log_text.tag_configure(tag, foreground=color)
 
         # --- Статистика + папка ---
         stats = tk.Frame(root, bg="#12121f")
@@ -1723,20 +1978,20 @@ class App:
                                   fg="#ffb020", bg="#12121f")
         self.blk_label.pack(side="left")
         self.folder_btn = tk.Button(stats, text="📂 Открыть папку результата",
-                                    command=self.openoutputfolder, state="disabled",
+                                    command=self.open_output_folder, state="disabled",
                                     bg="#2d2d44", fg="white", relief="flat",
                                     font=("Segoe UI", 9), cursor="hand2")
         self.folder_btn.pack(side="right")
 
-        self.root.after(80, self.pollui)
+        self.root.after(80, self.poll_ui)
         self.root.after(200, self.startuplog)
 
     # ---------------- браузерные помощники ----------------
-    def onbrowserpick(self, event=None):
-        cfg = self.browsermanager.find(self.selectedbrowser.get())
+    def on_browser_pick(self, event=None):
+        cfg = self.browser_manager.find(self.selected_browser.get())
         if cfg:
-            if cfg.get("profiledir") and not self.profilepath_var.get().strip():
-                self.profilepathvar.set(cfg["profile_dir"])
+            if cfg.get("profile_dir") and not self.profile_path_var.get().strip():
+                self.profile_path_var.set(cfg["profile_dir"])
             self.log(f"ℹ️ Выбран «{cfg['name']}» · движок {cfg['engine']} · exe: {cfg['exe']}")
             if cfg["engine"] == "firefox":
                 self.log("⚠️ Gecko: Playwright нужен патченный Firefox. Внешний скорее всего "
@@ -1749,11 +2004,11 @@ class App:
                      "закрывать. Браузер должен быть запущен с --remote-debugging-port "
                      "и отдельным --user-data-dir.", "info")
 
-    def refreshbrowserlist(self):
+    def refresh_browser_list(self):
         cur = self.selected_browser.get()
-        self.browsermanager.logcb = self.log
+        self.browser_manager.log_cb = self.log
         names = self.browser_manager.scan()
-        full = self.browsermanager.getbrowser_list()
+        full = self.browser_manager.get_browser_list()
         self.browser_combo['values'] = full
         self.selected_browser.set(cur if cur in full else full[0])
         self.log(f"🔄 Список браузеров обновлён: {len(names)} найдено")
@@ -1761,12 +2016,12 @@ class App:
     def browse_profile(self):
         path = filedialog.askdirectory(title="Папка профиля браузера (user-data-dir)")
         if path:
-            self.profilepathvar.set(path)
+            self.profile_path_var.set(path)
             self.use_profile.set(True)
             self.log(f"👤 Профиль: {path}")
 
     def test_cdp(self):
-        port = self.spin(self.cdpport, 9222, 1024, 65535)
+        port = self._spin(self.cdp_port, 9222, 1024, 65535)
         ws, ver = ExternalBrowserManager.probe_cdp(port, timeout=2.0)
         if ws:
             self.log(f"✅ CDP жив на 127.0.0.1:{port} → {ver}", "ok")
@@ -1785,28 +2040,28 @@ class App:
         self.log("=" * 60)
         self.log(f"🧪 ТЕСТ БРАУЗЕРА: {name}")
         try:
-            from playwright.syncapi import syncplaywright
+            from playwright.sync_api import sync_playwright
         except Exception as e:
             self.log(f"❌ playwright не импортируется: {e}", "err")
             return
-        plan = self.browsermanager.buildplan(
-            name, self.profilepathvar.get().strip(), bool(self.use_profile.get()),
-            bool(self.attachcdp.get()), self.spin(self.cdp_port, 9222, 1024, 65535),
-            bool(self.headless.get()), bool(self.copyprofile.get()), logcb=self.log)
+        plan = self.browser_manager.build_plan(
+            name, self.profile_path_var.get().strip(), bool(self.use_profile.get()),
+            bool(self.attach_cdp.get()), self._spin(self.cdp_port, 9222, 1024, 65535),
+            bool(self.headless.get()), bool(self.copy_profile.get()), log_cb=self.log)
         plan["headless"] = bool(self.headless.get())
         self.log(f"   план: mode={plan['mode']} engine={plan['engine']} "
-                 f"exe={plan['executablepath'] or '—'} profile={plan['userdata_dir'] or '—'}")
+                 f"exe={plan['executable_path'] or '—'} profile={plan['user_data_dir'] or '—'}")
         ua = random_ua()
-        locale, tz = randomlocaletz()
+        locale, tz = random_locale_tz()
         try:
             with sync_playwright() as p:
-                session = openwith_fallback(p, plan, ua, locale, tz,
+                session = open_with_fallback(p, plan, ua, locale, tz,
                                               random.choice(VIEWPORTS),
                                               bool(self.stealth.get()), self.log)
                 try:
                     page = session.new_page()
                     page.goto("https://example.com", wait_until="domcontentloaded", timeout=30000)
-                    page.waitfortimeout(600)
+                    page.wait_for_timeout(600)
                     self.log(f"   ✅ страница открыта: {page.title()}", "ok")
                     info = page.evaluate("() => ({ua: navigator.userAgent, wd: navigator.webdriver, "
                                           "plat: navigator.platform, lang: navigator.languages, "
@@ -1828,13 +2083,13 @@ class App:
         self.log("=" * 60)
 
     def installbg(self, what):
-        threading.Thread(target=installplaywrightbrowser, args=(what, self.log),
+        threading.Thread(target=install_playwright_browser, args=(what, self.log),
                          daemon=True).start()
 
     def startuplog(self):
-        self.browsermanager.logcb = self.log
+        self.browser_manager.log_cb = self.log
         self.log("=" * 62)
-        self.log(f"🚀 {APPNAME} v{APPVERSION} · build {BUILD_DATE}", "head")
+        self.log(f"🚀 {APP_NAME} v{APP_VERSION} · build {BUILD_DATE}", "head")
         self.log("=" * 62)
         self.log(f"📁 рабочая папка: {BASE_DIR}", "mut")
         names = self.browser_manager.scan()
@@ -1857,10 +2112,10 @@ class App:
     def set_stats(self, ok, fail, blocked=0):
         self.ui_q.put(("stats", (ok, fail, blocked)))
 
-    def pollui(self):
+    def poll_ui(self):
         try:
             while True:
-                kind, payload = self.uiq.getnowait()
+                kind, payload = self.ui_q.get_nowait()
                 if kind == "log":
                     text, level = payload
                     self.log_buffer.append(text)
@@ -1878,18 +2133,18 @@ class App:
                     self.fail_label.config(text=f"❌ {fail}")
                     self.blk_label.config(text=f"⚠️ {blocked}")
                 elif kind == "done":
-                    self.onfinished(payload)
+                    self.on_finished(payload)
         except queue.Empty:
             pass
         try:
-            self.root.after(80, self.pollui)
+            self.root.after(80, self.poll_ui)
         except tk.TclError:
             pass
 
     def copy_log(self):
         try:
             self.root.clipboard_clear()
-            self.root.clipboardappend(self.logtext.get("1.0", tk.END).strip())
+            self.root.clipboard_append(self.log_text.get("1.0", tk.END).strip())
             self.log("📋 Журнал скопирован в буфер обмена", "info")
         except Exception as e:
             self.log(f"⚠️ не удалось скопировать: {e}", "warn")
@@ -1934,42 +2189,42 @@ class App:
             messagebox.showwarning("Ошибка", "Ни одного валидного URL не найдено!")
             return
 
-        useprofile = bool(self.useprofile.get())
-        profilepath = self.profilepath_var.get().strip()
+        use_profile = bool(self.use_profile.get())
+        profile_path = self.profile_path_var.get().strip()
         attach = bool(self.attach_cdp.get())
-        if useprofile and not profilepath:
-            cfg = self.browsermanager.find(self.selectedbrowser.get())
+        if use_profile and not profile_path:
+            cfg = self.browser_manager.find(self.selected_browser.get())
             if cfg and cfg.get("profile_dir"):
-                profilepath = cfg["profiledir"]
-                self.profilepathvar.set(profile_path)
+                profile_path = cfg["profile_dir"]
+                self.profile_path_var.set(profile_path)
             else:
                 messagebox.showwarning("Профиль", "Укажи папку профиля (user-data-dir) "
                                                  "или сними галку «Использовать профиль».")
                 return
 
-        outdir = os.path.join(BASEDIR, f"MEGATANK{now_stamp()}")
+        out_dir = os.path.join(BASE_DIR, f"MEGA_TANK_{now_stamp()}")
         try:
-            os.makedirs(outdir, existok=True)
+            os.makedirs(out_dir, exist_ok=True)
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось создать папку результата:\n{e}")
             return
-        self.lastoutputdir = out_dir
+        self.last_output_dir = out_dir
 
         settings = {
-            "fmt": FORMATMAP.get(self.fmtlabel.get(), "md"),
+            "fmt": FORMAT_MAP.get(self.fmt_label.get(), "md"),
             "merge": bool(self.merge.get()),
             "aggressive": bool(self.aggr.get()),
             "stealth": bool(self.stealth.get()),
             "concurrency": self._spin(self.concurrency, 1, 1, 5),
             "retries": self._spin(self.retries, 1, 0, 3),
-            "externalbrowser": self.selectedbrowser.get(),
-            "customprofilepath": profile_path or None,
-            "useprofile": useprofile,
+            "external_browser": self.selected_browser.get(),
+            "custom_profile_path": profile_path or None,
+            "use_profile": use_profile,
             "attach_cdp": attach,
-            "cdpport": self.spin(self.cdp_port, 9222, 1024, 65535),
+            "cdp_port": self._spin(self.cdp_port, 9222, 1024, 65535),
             "headless": bool(self.headless.get()),
-            "copyprofile": bool(self.copyprofile.get()),
-            "exportstorage": bool(self.exportstorage.get()),
+            "copy_profile": bool(self.copy_profile.get()),
+            "export_storage": bool(self.export_storage.get()),
         }
 
         if attach and settings["headless"]:
@@ -1989,7 +2244,7 @@ class App:
         self.set_progress(0)
         self.set_stats(0, 0, 0)
 
-        threading.Thread(target=self.coordinator, args=(validurls, out_dir, settings),
+        threading.Thread(target=self.coordinator, args=(valid_urls, out_dir, settings),
                          daemon=True).start()
 
     def stop(self):
@@ -2011,21 +2266,21 @@ class App:
         except Exception:
             pass
 
-    def openoutputfolder(self):
-        if not self.lastoutputdir or not os.path.isdir(self.lastoutputdir):
+    def open_output_folder(self):
+        if not self.last_output_dir or not os.path.isdir(self.last_output_dir):
             return
         try:
             if sys.platform.startswith("win"):
-                os.startfile(self.lastoutputdir)
+                os.startfile(self.last_output_dir)
             elif sys.platform == "darwin":
-                subprocess.Popen(["open", self.lastoutputdir])
+                subprocess.Popen(["open", self.last_output_dir])
             else:
-                subprocess.Popen(["xdg-open", self.lastoutputdir])
+                subprocess.Popen(["xdg-open", self.last_output_dir])
         except Exception:
-            webbrowser.open(f"file://{self.lastoutputdir}")
+            webbrowser.open(f"file://{self.last_output_dir}")
 
     # ---------------- Координатор + воркеры ----------------
-    def coordinator(self, urls, outdir, settings):
+    def coordinator(self, urls, out_dir, settings):
         url_q = queue.Queue()
         for u in urls:
             url_q.put(u)
@@ -2035,14 +2290,14 @@ class App:
         total = len(urls)
 
         # Профиль/CDP = один браузер на процесс → принудительно один поток
-        sharedsession = bool(settings["useprofile"] or settings["attach_cdp"])
+        shared_session = bool(settings["use_profile"] or settings["attach_cdp"])
         if shared_session and settings["concurrency"] > 1:
             self.log(f"⚠️ Профиль/CDP не допускают {settings['concurrency']} потоков: "
                      f"user-data-dir блокируется одним процессом. Ставлю 1 поток.", "warn")
             settings["concurrency"] = 1
 
         self.log("=" * 62, "head")
-        self.log(f"🚀 {APPNAME} v{APPVERSION}  (build {BUILD_DATE})", "head")
+        self.log(f"🚀 {APP_NAME} v{APP_VERSION}  (build {BUILD_DATE})", "head")
         self.log(f"📁 Папка результата: {out_dir}", "info")
         self.log(f"📄 Формат: {settings['fmt'].upper()} | Объединить: "
                  f"{'ДА' if settings['merge'] else 'НЕТ'}", "info")
@@ -2051,7 +2306,7 @@ class App:
                  f"{'агрессивный' if settings['aggressive'] else 'щадящий'}", "info")
         self.log(f"🧭 Браузер: {settings['external_browser']}", "info")
         if settings["use_profile"]:
-            self.log(f"👤 Профиль: {settings['customprofilepath']}"
+            self.log(f"👤 Профиль: {settings['custom_profile_path']}"
                      + ("  [будет скопирован]" if settings["copy_profile"] else "  [оригинал]"),
                      "info")
         if settings["attach_cdp"]:
@@ -2060,19 +2315,19 @@ class App:
                  f"Stealth: {'ДА' if settings['stealth'] else 'НЕТ'}", "info")
         self.log("=" * 62, "head")
 
-        self.browsermanager.logcb = self.log
+        self.browser_manager.log_cb = self.log
         storage_dumped = [None]
 
         def worker(worker_id):
-            while not self.stopevent.isset():
+            while not self.stop_event.is_set():
                 try:
-                    url = urlq.getnowait()
+                    url = url_q.get_nowait()
                 except queue.Empty:
                     break
                 self.log(f"\n[поток {worker_id}] 📥 {url[:75]}", "info")
-                res = scrapeone(url, settings["fmt"], outdir, settings, self.log,
-                                 shouldstop=self.stopevent.is_set,
-                                 browsermanager=self.browsermanager)
+                res = scrape_one(url, settings["fmt"], out_dir, settings, self.log,
+                                 should_stop=self.stop_event.is_set,
+                                 browser_manager=self.browser_manager)
                 with self.lock:
                     manifest.append(res)
                     if res["status"] == "ok":
@@ -2086,14 +2341,50 @@ class App:
                     self.set_stats(counters["ok"], counters["fail"], counters["blocked"])
                     self.set_progress(counters["done"] / total * 100)
 
-                if self.stopevent.isset():
+                if self.stop_event.is_set():
                     break
                 delay = random.uniform(1.0, 3.0) if settings["aggressive"] \
                     else random.uniform(3.0, 7.0)
                 self.log(f"   ⏱️ [поток {worker_id}] пауза {delay:.1f} сек", "mut")
                 slept = 0.0
-                while slept  {mergedname}", "ok")
-                mergedfilename = mergedname
+                while slept < delay and not self.stop_event.is_set():
+                    time.sleep(0.25)
+                    slept += 0.25
+
+        threads = [threading.Thread(target=worker, args=(i + 1,), daemon=True)
+                   for i in range(settings["concurrency"])]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        order = {u: i for i, u in enumerate(urls)}
+        manifest.sort(key=lambda r: order.get(r["url"], 999999))
+
+        ok_results = [r for r in manifest if r["status"] == "ok"]
+        merged_filename = None
+
+        if settings["merge"] and ok_results and not self.stop_event.is_set():
+            self.log("\n" + "=" * 60)
+            self.log("🔗 ОБЪЕДИНЕНИЕ ФАЙЛОВ...")
+            self.log("=" * 60)
+            fmt = settings["fmt"]
+            merged_name = f"MEGA_FULL.{fmt}"
+            merged_path = os.path.join(out_dir, merged_name)
+            try:
+                if fmt == "pdf":
+                    merge_pdf(ok_results, out_dir, merged_path, self.log)
+                elif fmt == "txt":
+                    merge_text_like(ok_results, merged_path, fmt)
+                elif fmt == "md":
+                    merge_markdown(ok_results, merged_path)
+                elif fmt == "html":
+                    merge_html(ok_results, out_dir, merged_path)
+                elif fmt == "docx":
+                    merge_docx(ok_results, merged_path)
+                size = os.path.getsize(merged_path)
+                self.log(f"   ✅ Объединённый файл: {human_size(size)} -> {merged_name}", "ok")
+                merged_filename = merged_name
             except Exception as e:
                 self.log(f"   ❌ Ошибка объединения: {e}", "err")
 
@@ -2101,21 +2392,21 @@ class App:
             "label": settings["external_browser"],
             "engine": (manifest[0].get("engine") if manifest else "chromium"),
             "mode": (manifest[0].get("session_mode") if manifest else "bundled"),
-            "profile": settings["customprofilepath"],
-            "profileisolatedcopy": bool(settings["copyprofile"] and settings["useprofile"]),
-            "cdp": (f"127.0.0.1:{settings['cdpport']}" if settings["attachcdp"] else None),
+            "profile": settings["custom_profile_path"],
+            "profileisolatedcopy": bool(settings["copy_profile"] and settings["use_profile"]),
+            "cdp": (f"127.0.0.1:{settings['cdp_port']}" if settings["attach_cdp"] else None),
             "headless": bool(settings["headless"]),
         }
 
         try:
-            totals = writemanifestandindex(manifest, outdir, mergedfilename, browserinfo)
+            totals = write_manifest_and_index(manifest, out_dir, merged_filename, browser_info)
             self.log("\n📊 manifest.json и INDEX.md записаны", "ok")
             self.log(f"   Σ объём: {human_size(totals['bytes'])} | Σ слов: {totals['words']}", "mut")
         except Exception as e:
             self.log(f"⚠️ Не удалось записать manifest/index: {e}", "warn")
 
         self.log("\n" + "=" * 62, "head")
-        statusword = "ОСТАНОВЛЕНО" if self.stopevent.is_set() else "ГОТОВО"
+        status_word = "ОСТАНОВЛЕНО" if self.stop_event.is_set() else "ГОТОВО"
         self.log(f"🎉 {status_word}! Успешно: {counters['ok']} | Ошибок: {counters['fail']} "
                  f"| Подозрений на блок: {counters['blocked']}", "head")
         self.log(f"📁 Папка: {out_dir}", "info")
@@ -2124,26 +2415,26 @@ class App:
         self.set_progress(100)
         self.ui_q.put(("done", {
             "ok": counters["ok"], "fail": counters["fail"], "blocked": counters["blocked"],
-            "outdir": outdir, "stopped": self.stopevent.isset(),
+            "out_dir": out_dir, "stopped": self.stop_event.is_set(),
         }))
 
-    def exportstorage(self, out_dir, settings):
+    def export_storage(self, out_dir, settings):
         """Открывает тот же браузер/профиль и выгружает storage_state.json."""
         try:
-            from playwright.syncapi import syncplaywright
-            plan = self.browsermanager.buildplan(
-                settings["externalbrowser"], settings["customprofile_path"] or "",
-                settings["useprofile"], False, settings["cdpport"],
-                True, settings["copyprofile"], logcb=self.log)
+            from playwright.sync_api import sync_playwright
+            plan = self.browser_manager.build_plan(
+                settings["external_browser"], settings["custom_profile_path"] or "",
+                settings["use_profile"], False, settings["cdp_port"],
+                True, settings["copy_profile"], log_cb=self.log)
             plan["headless"] = True
             ua = random_ua()
-            locale, tz = randomlocaletz()
+            locale, tz = random_locale_tz()
             with sync_playwright() as p:
-                session = openwith_fallback(p, plan, ua, locale, tz,
+                session = open_with_fallback(p, plan, ua, locale, tz,
                                               random.choice(VIEWPORTS), False, self.log)
                 try:
                     if session.owns_context:
-                        dumpstoragestate(session, out_dir, self.log)
+                        dump_storage_state(session, out_dir, self.log)
                     else:
                         self.log("   ℹ️ контекст принадлежит браузеру пользователя — "
                                  "cookies не выгружаем (приватность)", "warn")
@@ -2152,7 +2443,7 @@ class App:
         except Exception as e:
             self.log(f"⚠️ экспорт сессии не удался: {str(e)[:140]}", "warn")
 
-    def onfinished(self, payload):
+    def on_finished(self, payload):
         self.is_running = False
         self.btn.config(state="normal", text="🚀 НАЧАТЬ")
         self.stop_btn.config(state="disabled", text="⛔ СТОП")
@@ -2170,10 +2461,10 @@ class App:
             f"📁 Папка:\n{payload['out_dir']}",
         )
 
-==============================================================================
-ЗАПУСК
-==============================================================================
-if name == "main":
+# ==============================================================================
+# ЗАПУСК
+# ==============================================================================
+if __name__ == "__main__":
     installer = AutoInstaller()
     deps_ok = installer.run()
 
