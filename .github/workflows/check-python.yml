@@ -1,0 +1,35 @@
+name: Python syntax check
+
+on:
+  push:
+    branches: [main]
+    paths: ['**/*.py', '.github/workflows/check-python.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: py_compile all Python files
+        run: |
+          rm -f report.txt
+          while IFS= read -r f; do
+            if python3 -m py_compile "$f" 2>/tmp/err.txt; then
+              echo "OK $f" >> report.txt
+            else
+              echo "FAIL $f :: $(head -3 /tmp/err.txt | tr '\n' ' ')" >> report.txt
+            fi
+          done < <(git ls-files '*.py')
+          cat report.txt
+      - name: Publish report branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b ci-report
+          git add report.txt
+          git commit -m "Python syntax check report"
+          git push origin ci-report --force

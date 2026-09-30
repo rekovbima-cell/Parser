@@ -32,7 +32,7 @@ with open(out + '/chat/INDEX.txt', 'w', encoding='utf-8') as fh:
     fh.write(chr(10).join(index))
 print('CHAT MESSAGES: %d' % n)
 
-# --- docs: 38k parts ---
+# --- docs: 12k parts (smaller, для чтения через выгрузку без обрезки) ---
 for fn in sorted(os.listdir(base)):
     if fn.endswith('.json'):
         continue
@@ -42,7 +42,7 @@ for fn in sorted(os.listdir(base)):
     with open(src, encoding='utf-8', errors='replace') as f:
         txt = f.read()
     tag = fn.split(' ')[0][:6]
-    size = 38000
+    size = 12000
     parts = [txt[i:i+size] for i in range(0, len(txt), size)]
     for p, chunk in enumerate(parts):
         with open('%s/doc/%s.part%d' % (out, tag, p), 'w', encoding='utf-8') as fh:
